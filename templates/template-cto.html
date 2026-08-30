@@ -1,0 +1,972 @@
+<meta charset="utf-8">
+<title>PAGE TITLE</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+<!--
+  template-cto.html — the "cto" look: indigo palette, Poppins body + Playfair display
+  numerals, sticky contents rail, masthead with indigo thesis panel, swatch status cards,
+  numbered stage list with pills. Copy this file, fill the SLOT blocks, delete unused COMPONENT
+  blocks. Self-contained except Google Fonts (Poppins / Playfair Display).
+-->
+<style>
+:root{
+  --dark-indigo:#2D297C;
+  --medium-indigo:#6C63F1;
+  --light-indigo:#897EF7;
+  --panel-indigo:#2D297C;
+  --black:#1A1A1A;
+  --grey:#575757;
+  --white:#FFFFFF;
+  --card:#FFFFFF;
+  --cta-blue:#0075C9;
+  --g1:#A3A3A3; --g2:#D1D1D1; --g3:#EBEBEB; --g4:#FBFBFB;
+  --tint:#F0EFFB; --tint2:#E4E2F8;
+  --ok:#1AA785; --ok-d:#006655;
+  --warn:#F7C548; --warn-d:#E38B27;
+  --err:#E74C3C; --err-d:#922E3A;
+  --font-body:'Poppins',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  --font-display:'Playfair Display','Times New Roman',serif;
+  --rail:260px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --dark-indigo:#A79EFF;
+    --medium-indigo:#8F87FF;
+    --light-indigo:#6C63F1;
+    --panel-indigo:#322D8A;
+    --black:#E8E7F0;
+    --grey:#A9A7BC;
+    --white:#14131E;
+    --card:#1C1B2A;
+    --cta-blue:#57AEE8;
+    --g1:#7C7A90; --g2:#3A384C; --g3:#2A2839; --g4:#1C1B2A;
+    --tint:#232041; --tint2:#2A2650;
+    --ok:#34C39C; --ok-d:#5AD6B4;
+    --warn:#F7C548; --warn-d:#E8A44D;
+    --err:#EF7261; --err-d:#E08B95;
+  }
+}
+:root[data-theme="dark"]{
+  --dark-indigo:#A79EFF;
+  --medium-indigo:#8F87FF;
+  --light-indigo:#6C63F1;
+  --panel-indigo:#322D8A;
+  --black:#E8E7F0;
+  --grey:#A9A7BC;
+  --white:#14131E;
+  --card:#1C1B2A;
+  --cta-blue:#57AEE8;
+  --g1:#7C7A90; --g2:#3A384C; --g3:#2A2839; --g4:#1C1B2A;
+  --tint:#232041; --tint2:#2A2650;
+  --ok:#34C39C; --ok-d:#5AD6B4;
+  --warn:#F7C548; --warn-d:#E8A44D;
+  --err:#EF7261; --err-d:#E08B95;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0; font-family:var(--font-body); font-weight:400;
+  color:var(--black); background:var(--white);
+  -webkit-font-smoothing:antialiased; line-height:1.62; font-size:16px;
+}
+h1,h2,h3,h4{font-family:var(--font-body);color:var(--dark-indigo);margin:0}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.88em;background:var(--g4);border:1px solid var(--g3);border-radius:4px;padding:1px 5px}
+a{color:var(--cta-blue)}
+section{scroll-margin-top:70px}
+
+/* ---------- layout ---------- */
+.wrap{display:flex;align-items:flex-start;max-width:1440px;margin:0 auto}
+nav.rail{
+  position:sticky; top:0; width:var(--rail); flex:0 0 var(--rail);
+  height:100vh; padding:36px 26px 36px 34px; border-right:1px solid var(--g3);
+  overflow-y:auto;
+}
+.rail .brand{
+  display:flex;align-items:center;gap:9px;text-decoration:none;
+  font-weight:700;font-size:16px;color:var(--dark-indigo);margin-bottom:6px;
+}
+.rail .brand svg{color:var(--medium-indigo);flex:none}
+.rail .kicker{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--g1);margin-bottom:18px}
+.rail .rail-label{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--g1);margin:22px 0 7px}
+.rail ol{list-style:none;margin:0;padding:0;counter-reset:s}
+.rail ol li{counter-increment:s;margin:0 0 3px}
+.rail ol a{
+  display:flex;gap:11px;text-decoration:none;color:var(--grey);
+  font-size:13px;line-height:1.35;padding:7px 9px;border-radius:7px;transition:.15s;
+}
+.rail ol a::before{content:counter(s,decimal-leading-zero);color:var(--g1);font-variant-numeric:tabular-nums;font-weight:600;min-width:20px;font-size:11.5px;padding-top:1px}
+.rail ol a:hover{background:var(--tint);color:var(--dark-indigo)}
+.rail ol a:hover::before{color:var(--medium-indigo)}
+.rail ul.pages{list-style:none;margin:0;padding:0}
+.rail ul.pages li{margin:0 0 2px}
+.rail ul.pages a{
+  display:block;text-decoration:none;color:var(--grey);
+  font-size:12.5px;line-height:1.35;padding:5px 9px;border-radius:7px;
+}
+.rail ul.pages a:hover{background:var(--tint);color:var(--dark-indigo)}
+.rail a:focus-visible{outline:2px solid var(--cta-blue);outline-offset:2px}
+.rail .other{margin-top:22px;padding-top:14px;border-top:1px solid var(--g3);font-size:12px;color:var(--g1)}
+
+main{flex:1 1 auto;min-width:0;padding:0 66px 110px;max-width:1000px}
+
+/* ---------- theme switch ---------- */
+.theme-switch{
+  display:inline-flex;border:1px solid var(--g2);border-radius:20px;
+  background:var(--g4);overflow:hidden;
+}
+.theme-switch button{
+  appearance:none;border:none;background:transparent;color:var(--g1);
+  width:32px;height:27px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;
+}
+.theme-switch button[aria-pressed="true"]{background:var(--tint2);color:var(--medium-indigo)}
+.theme-switch button:focus-visible{outline:2px solid var(--cta-blue)}
+.theme-switch svg{display:block}
+.theme-switch.fixed{position:fixed;top:14px;right:18px;z-index:60;box-shadow:0 2px 10px rgba(20,18,50,.08)}
+@media (max-width:1080px){.theme-switch.fixed{display:none}}
+
+/* ---------- mobile top bar (appears when the rail hides) ---------- */
+.topbar{display:none}
+@media (max-width:1080px){
+  .topbar{
+    display:flex;align-items:center;gap:6px;
+    position:sticky;top:0;z-index:50;
+    background:var(--white);border-bottom:1px solid var(--g3);
+    padding:8px 16px;
+  }
+  .topbar .brand{
+    display:inline-flex;align-items:center;gap:8px;text-decoration:none;
+    font-weight:700;font-size:14.5px;color:var(--dark-indigo);
+  }
+  .topbar .brand svg{color:var(--medium-indigo)}
+  .topbar-spacer{flex:1}
+  .menu{position:relative}
+  .menu summary{
+    list-style:none;user-select:none;cursor:pointer;
+    font-size:12.5px;font-weight:600;color:var(--grey);
+    padding:6px 10px;border-radius:7px;
+  }
+  .menu summary::-webkit-details-marker{display:none}
+  .menu summary::after{content:" ▾";font-size:10px;color:var(--g1)}
+  .menu[open] summary{background:var(--tint);color:var(--dark-indigo)}
+  .menu-panel{
+    position:absolute;right:0;top:calc(100% + 8px);width:min(92vw,440px);
+    background:var(--card);border:1px solid var(--g2);border-radius:11px;
+    box-shadow:0 8px 30px rgba(20,18,50,.18);padding:12px 14px;
+    display:grid;grid-template-columns:1fr 1fr;gap:2px 14px;
+  }
+  .menu-panel .mp-group{
+    grid-column:1/-1;font-size:10px;letter-spacing:.13em;text-transform:uppercase;
+    font-weight:600;color:var(--medium-indigo);margin:8px 0 2px;
+  }
+  .menu-panel .mp-group:first-child{margin-top:0}
+  .menu-panel a{font-size:12.5px;color:var(--grey);text-decoration:none;padding:4px 7px;border-radius:6px}
+  .menu-panel a:hover{background:var(--tint);color:var(--dark-indigo)}
+}
+
+/* ---------- copy buttons ---------- */
+.copyhost{position:relative}
+.copybtn{
+  position:absolute;top:10px;right:10px;width:26px;height:26px;
+  display:inline-flex;align-items:center;justify-content:center;
+  border:1px solid var(--g2);border-radius:7px;background:var(--g4);color:var(--g1);
+  cursor:pointer;opacity:0;transition:opacity .12s ease;padding:0;
+}
+.copyhost:hover .copybtn,.copybtn:focus-visible{opacity:1}
+.copybtn:hover{color:var(--medium-indigo);border-color:var(--light-indigo)}
+.copybtn:focus-visible{outline:2px solid var(--cta-blue)}
+.copybtn .ic-check{display:none;color:var(--ok)}
+.copybtn.copied .ic-check{display:block}
+.copybtn.copied .ic-copy{display:none}
+.copybtn.copied{opacity:1}
+.thesis.copyhost .copybtn{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.3);color:rgba(255,255,255,.75)}
+.thesis.copyhost .copybtn:hover{color:#fff}
+@media (hover:none){.copybtn{opacity:.6}}
+
+/* ---------- masthead ---------- */
+header.mast{padding:74px 0 46px;border-bottom:1px dashed var(--light-indigo)}
+header.mast .eyebrow{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--medium-indigo);font-weight:600;margin-bottom:16px}
+header.mast h1{font-size:52px;line-height:1.06;font-weight:700;letter-spacing:-.02em}
+header.mast .sub{font-size:22px;color:var(--grey);margin-top:12px;font-weight:400}
+.thesis{
+  margin-top:34px;padding:24px 28px;background:var(--panel-indigo);border-radius:12px;
+  color:#fff;font-size:19px;font-weight:600;line-height:1.45;
+}
+.meta{margin-top:20px;font-size:12.5px;color:var(--g1)}
+
+/* ---------- sections ---------- */
+section{padding:56px 0 8px;border-bottom:1px solid var(--g3)}
+section:last-of-type{border-bottom:0}
+.snum{font-family:var(--font-display);font-weight:700;font-size:15px;color:var(--medium-indigo);letter-spacing:.06em}
+section>h2{font-size:32px;font-weight:700;letter-spacing:-.015em;margin:2px 0 6px}
+.lede{font-size:17px;color:var(--grey);margin:0 0 26px;max-width:none}
+p{margin:0 0 16px;max-width:none}
+h3{font-size:18px;font-weight:600;margin:30px 0 10px}
+strong{font-weight:600}
+
+/* ---------- components ---------- */
+.callout{
+  border:1px solid var(--light-indigo);background:var(--tint);
+  border-radius:11px;padding:20px 24px;margin:26px 0;
+}
+.callout p:last-child{margin-bottom:0}
+.callout.dark{background:var(--panel-indigo);border-color:var(--panel-indigo);color:#fff}
+.callout.dark strong{color:#fff}
+.callout.plain{background:var(--g4);border-color:var(--g2)}
+.callout .tag{
+  display:inline-block;font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;
+  font-weight:600;color:var(--medium-indigo);margin-bottom:7px;
+}
+
+figure{margin:34px 0 30px}
+figure svg{width:100%;height:auto;display:block}
+figcaption{font-size:12.5px;color:var(--g1);margin-top:11px;text-align:left}
+.fig-light{display:block}
+.fig-dark{display:none}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]) .fig-light{display:none}
+  :root:not([data-theme="light"]) .fig-dark{display:block}
+}
+:root[data-theme="dark"] .fig-light{display:none}
+:root[data-theme="dark"] .fig-dark{display:block}
+
+.callout.dark .tag{color:var(--light-indigo)}
+
+.grid{display:grid;gap:16px;margin:26px 0}
+.g2{grid-template-columns:repeat(2,1fr)}
+.g3{grid-template-columns:repeat(3,1fr)}
+.g4{grid-template-columns:repeat(4,1fr)}
+.card{border:1px solid var(--g2);border-radius:11px;padding:19px 21px;background:var(--card)}
+.card h4{font-size:15px;font-weight:600;margin-bottom:7px}
+.card h4 a{color:inherit;text-decoration:none}
+.card h4 a:hover{text-decoration:underline}
+.card p{font-size:13.5px;color:var(--grey);margin:0;line-height:1.5}
+.card .swatchline{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--g1);font-weight:600;margin-bottom:8px}
+.card ul{margin:8px 0 0;padding-left:17px;font-size:13.5px;color:var(--black);line-height:1.55}
+.card ul li{margin-bottom:5px}
+.card.tinted{background:var(--tint);border-color:var(--light-indigo)}
+.card.tinted p{color:var(--dark-indigo)}
+
+.swatch{display:inline-block;width:12px;height:12px;border-radius:4px;margin-right:9px;vertical-align:-1px}
+.s-ok{background:var(--ok)} .s-warn{background:var(--warn-d)} .s-err{background:var(--err)} .s-neutral{background:var(--g1)}
+.s-indigo{background:var(--medium-indigo)}
+
+/* definition rows */
+.rows{margin:20px 0 6px}
+.row{display:flex;gap:18px;padding:15px 0;border-bottom:1px solid var(--g3)}
+.row:last-child{border-bottom:0}
+.row .k{flex:0 0 210px;font-weight:600;font-size:14.5px;color:var(--dark-indigo)}
+.row .v{font-size:14px;color:var(--grey);line-height:1.55}
+.row .v em{font-style:italic}
+
+/* tables */
+table{border-collapse:collapse;width:100%;margin:24px 0;font-size:14px}
+th{
+  text-align:left;font-weight:600;color:var(--dark-indigo);
+  border-bottom:2px solid var(--dark-indigo);padding:9px 12px 9px 0;
+}
+td{padding:11px 12px 11px 0;border-bottom:1px solid var(--g2);color:var(--black);vertical-align:top}
+td.k{font-weight:600;color:var(--dark-indigo);white-space:nowrap}
+td .sub{display:block;color:var(--g1);font-size:12px;margin-top:3px;font-weight:400}
+tbody tr:nth-child(even){background:var(--g4)}
+td.num{font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--grey)}
+
+ul.plain{padding-left:19px;margin:0 0 16px;max-width:none}
+ul.plain li{margin-bottom:7px}
+
+/* stat ledger */
+dl.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1px;background:var(--g2);border:1px solid var(--g2);border-radius:11px;overflow:hidden;margin:24px 0}
+.stat{background:var(--card);padding:15px 17px;margin:0}
+.stat dt{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;font-weight:600;color:var(--g1);margin:0 0 6px}
+.stat dd{margin:0;font-size:24px;font-weight:650;letter-spacing:-.02em;font-variant-numeric:tabular-nums;color:var(--dark-indigo)}
+.stat dd.ok{color:var(--ok)} .stat dd.err{color:var(--err)} .stat dd.ind{color:var(--medium-indigo)}
+.stat dd small{display:block;font-size:12px;font-weight:400;color:var(--g1);margin-top:3px;letter-spacing:0}
+
+/* verdict cards */
+.verdicts{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));margin:24px 0}
+.verdict{background:var(--card);border:1px solid var(--g2);border-radius:11px;padding:17px 19px}
+.verdict .q{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;font-weight:600;color:var(--g1);margin:0 0 8px}
+.verdict .a{font-size:16px;font-weight:600;margin:0 0 6px}
+.verdict .a.yes{color:var(--ok-d)} .verdict .a.no{color:var(--err-d)} .verdict .a.part{color:var(--warn-d)}
+.verdict .d{margin:0;font-size:13.5px;color:var(--grey);line-height:1.5}
+
+/* correction block */
+.correction{background:var(--tint);border:1px solid var(--warn-d);border-radius:11px;padding:16px 20px;font-size:14px;margin:24px 0}
+.correction>b:first-child{color:var(--warn-d)}
+.correction ol{margin:8px 0 0;padding-left:20px}
+.correction li{margin:6px 0;color:var(--grey)}
+
+/* milestone timeline */
+ul.milestones{list-style:none;margin:20px 0 0;padding:0;border-left:2px solid var(--g2)}
+ul.milestones li{position:relative;padding:0 0 14px 22px;font-size:14px;color:var(--grey)}
+ul.milestones li::before{content:"";position:absolute;left:-6px;top:7px;width:10px;height:10px;border-radius:50%;background:var(--medium-indigo);border:2px solid var(--white)}
+ul.milestones li.cut::before{background:var(--err)}
+ul.milestones .d{font-size:12px;font-weight:600;color:var(--dark-indigo);margin-right:8px}
+ul.milestones .sha{font-size:12px;color:var(--g1)}
+
+/* compare columns */
+.compare-cols{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));margin:24px 0}
+.ccol{background:var(--card);border:1px solid var(--g2);border-radius:11px;overflow:hidden}
+.ccol .hd{padding:10px 15px;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;font-weight:600;background:var(--tint);border-bottom:1px solid var(--g2);color:var(--dark-indigo)}
+.ccol ol{margin:0;padding:10px 15px 13px 34px;font-size:13.5px}
+.ccol li{padding:3px 0;color:var(--grey)}
+.ccol li.only{color:var(--black);font-weight:500}
+.ccol li .flag{font-size:10px;letter-spacing:.08em;text-transform:uppercase;font-weight:600;color:var(--medium-indigo);margin-left:8px}
+.ccol li .flag.warn{color:var(--warn-d)}
+
+/* decision cards */
+.decision{display:grid;grid-template-columns:56px 1fr;gap:14px;background:var(--card);border:1px solid var(--g2);border-radius:11px;padding:17px 19px}
+.decision+.decision{margin-top:12px}
+.decision .id{font-family:var(--font-display);font-weight:700;font-size:22px;color:var(--medium-indigo);line-height:1}
+.decision h3{margin:0 0 6px;font-size:15px}
+.decision p{margin:0;font-size:14px;color:var(--grey);max-width:none}
+.decision p+p{margin-top:6px}
+.decision .lean{color:var(--black)}
+
+/* option compare */
+.opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;margin:24px 0}
+.opt{background:var(--card);border:1px solid var(--g2);border-radius:11px;padding:20px 22px;position:relative;overflow:hidden}
+.opt::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:var(--g2)}
+.opt.rec::before{background:var(--medium-indigo)} .opt.warn::before{background:var(--warn-d)} .opt.no::before{background:var(--err)}
+.opt .tt{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;color:var(--g1);margin:0 0 6px;display:flex;justify-content:space-between;gap:10px;align-items:center}
+.opt h3{font-size:16px;margin:0 0 8px}
+.opt p{font-size:14px;color:var(--grey);margin:0 0 10px}
+.opt ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px}
+.opt li{position:relative;padding-left:20px;font-size:13.5px;color:var(--grey);line-height:1.5}
+.opt li strong{color:var(--black)}
+.opt li.pro::before{content:"+";position:absolute;left:0;color:var(--ok-d);font-weight:700}
+.opt li.con::before{content:"\2212";position:absolute;left:0;color:var(--err-d);font-weight:700}
+
+/* signal-chain lanes */
+.chain{display:flex;flex-direction:column;gap:12px;margin:24px 0}
+.chain-lane{background:var(--card);border:1px solid var(--g2);border-radius:11px;padding:17px 19px;position:relative;overflow:hidden}
+.chain-lane::before{content:"";position:absolute;top:0;left:0;bottom:0;width:3px;background:var(--g2)}
+.chain-lane.works::before{background:var(--ok)} .chain-lane.broken::before{background:var(--err)}
+.chain-lane .lt{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;color:var(--g1);margin-bottom:11px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.hops{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.hop{font-size:12.5px;color:var(--grey);background:var(--g4);border:1px solid var(--g2);border-radius:7px;padding:6px 10px;white-space:nowrap}
+.hop.good{border-color:var(--ok);color:var(--black)}
+.hop.dead{border-color:var(--err);background:var(--tint);color:var(--err-d);font-weight:600}
+.arr{color:var(--g1);font-size:13px}
+.chain-lane .note{font-size:13px;color:var(--grey);margin:10px 0 0}
+
+/* register rows */
+.register{margin-top:20px;display:flex;flex-direction:column;gap:1px;background:var(--g3);border:1px solid var(--g3);border-radius:11px;overflow:hidden}
+.register .item{background:var(--card);padding:15px 18px;display:grid;grid-template-columns:1fr auto;gap:6px 16px;align-items:start}
+.register .row-title{font-weight:600;font-size:14.5px;margin:0;color:var(--dark-indigo)}
+.register .row-body{margin:4px 0 0;color:var(--grey);font-size:13.5px;max-width:none}
+.register .cite{margin:7px 0 0;font-size:11.5px;color:var(--g1);word-break:break-word}
+.register .cite b{color:var(--grey);font-weight:500}
+.register .tags{display:flex;gap:6px;align-items:center;flex-shrink:0}
+.rchip{font-size:10px;letter-spacing:.09em;text-transform:uppercase;font-weight:600;padding:4px 8px;border-radius:5px;white-space:nowrap}
+.rchip.blocked{background:var(--tint2);color:var(--err-d)}
+.rchip.done{background:var(--tint);color:var(--ok-d)}
+.rchip.open{background:var(--tint);color:var(--medium-indigo)}
+.rchip.size{background:transparent;color:var(--g1);border:1px solid var(--g2)}
+.rchip.unver{background:transparent;color:var(--warn-d);border:1px dashed var(--warn-d)}
+.chip-legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:14px}
+.chip-legend span{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--g1)}
+
+/* arrow lists */
+ul.arrows{margin:12px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:11px}
+ul.arrows li{position:relative;padding-left:26px;color:var(--grey);font-size:14px;max-width:none}
+ul.arrows li strong{color:var(--black)}
+ul.arrows li::before{content:"\2192";position:absolute;left:0;top:0;color:var(--medium-indigo)}
+ul.arrows.ask li::before{content:"?";color:var(--warn-d);font-weight:700}
+
+/* evidence fold */
+details.fold{border:1px solid var(--g2);border-radius:11px;background:var(--card);margin:20px 0}
+details.fold summary{cursor:pointer;padding:12px 17px;font-size:14px;font-weight:600;color:var(--dark-indigo);list-style:none}
+details.fold summary::-webkit-details-marker{display:none}
+details.fold summary::before{content:"\25b8 "}
+details.fold[open] summary::before{content:"\25be "}
+details.fold>div{padding:2px 17px 14px;border-top:1px solid var(--g3)}
+.ev{list-style:none;margin:0;padding:0;font-size:13px}
+.ev li{padding:6px 0;border-top:1px solid var(--g3);color:var(--grey)}
+.ev li:first-child{border-top:0}
+.ev b{color:var(--black)}
+
+/* numbered stage list */
+ol.qs{list-style:none;counter-reset:q;padding:0;margin:20px 0 0}
+ol.qs li{counter-increment:q;display:flex;gap:14px;align-items:flex-start;padding:14px 40px 14px 0;border-bottom:1px solid var(--g3);font-size:15px}
+ol.qs li:last-child{border-bottom:0}
+ol.qs li::before{
+  content:counter(q);flex:0 0 26px;height:26px;border-radius:8px;background:var(--tint);
+  color:var(--dark-indigo);font-weight:600;font-size:12.5px;display:flex;align-items:center;justify-content:center;margin-top:1px;
+}
+ol.qs li.blocked::before{background:var(--err);color:#fff}
+ol.qs .qbody{flex:1 1 auto;min-width:0}
+ol.qs .qt{font-weight:600;color:var(--dark-indigo)}
+ol.qs .qop{font-size:12px;color:var(--g1);margin-top:1px}
+ol.qs .qd{font-size:13.5px;color:var(--grey);margin-top:5px;max-width:none}
+ol.qs .qd strong{color:var(--black)}
+ol.qs .qlinks{font-size:13px;margin-top:6px}
+ol.qs .qlinks a{margin-right:12px}
+ol.qs .qpill{flex:none;align-self:center}
+
+.pill{
+  display:inline-block;padding:3px 10px;border-radius:6px;font-size:11px;font-weight:600;
+  letter-spacing:.04em;text-transform:uppercase;white-space:nowrap;
+}
+.pill.firm{background:var(--panel-indigo);color:#fff}
+.pill.cond{background:var(--card);color:var(--dark-indigo);border:1px dashed var(--light-indigo)}
+.pill.stop{background:var(--err);color:#fff}
+
+footer.end{padding:52px 0 0;color:var(--grey);font-size:14px}
+footer.end .rule{height:1px;background:var(--g3);margin-bottom:30px}
+footer.end .logo{width:132px;display:block;margin-bottom:18px}
+
+/* ---------- responsive ---------- */
+@media (max-width:1080px){
+  nav.rail{display:none}
+  main{padding:0 30px 80px;max-width:none}
+  header.mast{padding-top:44px}
+  header.mast h1{font-size:38px}
+  .g4{grid-template-columns:repeat(2,1fr)}
+  .g3{grid-template-columns:1fr}
+  .g2{grid-template-columns:1fr}
+  .row{flex-direction:column;gap:5px}
+  .row .k{flex:none}
+  ol.qs li{padding-right:0;flex-wrap:wrap}
+  ol.qs .qpill{margin-left:40px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+
+/* ---------- print ---------- */
+@media print{
+  nav.rail,.topbar,.theme-switch.fixed,.copybtn{display:none}
+  main{padding:0;max-width:none}
+  body{font-size:11pt}
+  section{break-inside:auto;padding-top:24px}
+  figure,.callout,.card,table,.rows{break-inside:avoid}
+  header.mast{padding-top:0}
+  header.mast h1{font-size:30pt}
+  a{color:var(--black);text-decoration:none}
+}
+</style>
+
+<!-- ══ SLOT: mobile top bar — mirror the rail's links; shown only under 1080px ══ -->
+<div class="topbar">
+  <a class="brand" href="#top">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l2.5 5 5.5.8-4 3.9.9 5.5-4.9-2.6-4.9 2.6.9-5.5-4-3.9 5.5-.8z"/></svg>
+    BRAND / PROJECT
+  </a>
+  <div class="topbar-spacer"></div>
+  <details class="menu" id="pagesMenu">
+    <summary>Menu</summary>
+    <div class="menu-panel">
+      <div class="mp-group">This page</div>
+      <a href="#s1">Section one</a>
+      <a href="#s2">Section two</a>
+      <a href="#s3">Section three</a>
+      <a href="#s4">Section four</a>
+      <div class="mp-group">Sub-pages (optional)</div>
+      <a href="topics/example.html">An example sub-page</a>
+    </div>
+  </details>
+  <div class="theme-switch" role="group" aria-label="Theme">
+    <button type="button" data-set="light" aria-label="Light theme" title="Light">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+    </button>
+    <button type="button" data-set="auto" aria-label="Follow system theme" title="Auto (system)">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor" stroke="none"/></svg>
+    </button>
+    <button type="button" data-set="dark" aria-label="Dark theme" title="Dark">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    </button>
+  </div>
+</div>
+
+<!-- desktop theme switch — fixed top right; the mobile one lives in the topbar -->
+<div class="theme-switch fixed" role="group" aria-label="Theme">
+  <button type="button" data-set="light" aria-label="Light theme" title="Light">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+  </button>
+  <button type="button" data-set="auto" aria-label="Follow system theme" title="Auto (system)">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor" stroke="none"/></svg>
+  </button>
+  <button type="button" data-set="dark" aria-label="Dark theme" title="Dark">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+  </button>
+</div>
+
+<div class="wrap" id="top">
+
+<!-- ══ SLOT: contents rail — numbered "Contents" for on-page sections, plain "Pages" list for sub-pages ══ -->
+<nav class="rail" aria-label="Contents">
+  <a class="brand" href="#top">
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l2.5 5 5.5.8-4 3.9.9 5.5-4.9-2.6-4.9 2.6.9-5.5-4-3.9 5.5-.8z"/></svg>
+    BRAND / PROJECT
+  </a>
+  <div class="kicker">DOC KIND · audience</div>
+  <div class="rail-label">Contents</div>
+  <ol>
+    <li><a href="#s1">Section one</a></li>
+    <li><a href="#s2">Section two</a></li>
+    <li><a href="#s3">Section three</a></li>
+    <li><a href="#s4">Section four</a></li>
+  </ol>
+  <div class="rail-label">Pages</div>
+  <ul class="pages">
+    <li><a href="topics/example.html">An example sub-page</a></li>
+  </ul>
+  <div class="other">Optional footer links: <a href="#top">related page</a></div>
+</nav>
+
+<main>
+
+<!-- ══ SLOT: masthead — eyebrow, h1, sub, indigo thesis panel (the one takeaway), mono-ish meta line ══ -->
+<header class="mast">
+  <div class="eyebrow">KICKER · context line</div>
+  <h1>Page Title</h1>
+  <div class="sub">One-line subtitle saying what this page covers</div>
+  <div class="thesis copyhost">The single most important sentence of the whole page — the claim everything below supports.</div>
+  <div class="meta">Generated YYYY-MM-DD · pinned to repo abc1234 · provenance / scope line</div>
+</header>
+
+<!-- ══ SLOT: sections — each gets a Playfair .snum, h2, .lede ══ -->
+
+<!-- COMPONENT: status card grid (at a glance) — swatch = claim: s-ok s-warn s-err s-neutral s-indigo -->
+<section id="s1">
+  <div class="snum">01</div>
+  <h2>At a glance</h2>
+  <p class="lede">One or two sentences framing the status board and its conventions.</p>
+
+  <div class="grid g3">
+    <div class="card copyhost">
+      <div class="swatchline"><span class="swatch s-ok"></span>Area · scope</div>
+      <h4>Delivered &amp; gated</h4>
+      <p>One or two lines of supporting detail; the swatch color carries the status.</p>
+    </div>
+    <div class="card copyhost">
+      <div class="swatchline"><span class="swatch s-warn"></span>Another area</div>
+      <h4>In flight</h4>
+      <p>Use warn for pending, err for blocked, indigo for frozen/contractual, neutral for inert.</p>
+    </div>
+    <div class="card copyhost">
+      <div class="swatchline"><span class="swatch s-err"></span>Blocked area</div>
+      <h4>Blocked on X</h4>
+      <p>Say what unblocks it and who owns that.</p>
+    </div>
+  </div>
+
+  <!-- COMPONENT: callout — the paragraph the reader must not miss -->
+  <div class="callout copyhost">
+    <span class="tag">READ THIS FIRST</span>
+    <p>A short paragraph that must not be skimmed past. One callout per page is plenty.</p>
+  </div>
+
+  <!-- COMPONENT: figure — provide BOTH .fig-light and .fig-dark SVG variants; theme picks one -->
+  <figure>
+    <svg class="fig-light" viewBox="0 0 900 160" role="img" aria-label="Placeholder diagram.">
+      <rect x="0" y="10" width="432" height="140" rx="10" fill="#FBFBFB" stroke="#D1D1D1"/>
+      <text x="216" y="85" font-family="Poppins,sans-serif" font-size="15" fill="#575757" text-anchor="middle">Left panel</text>
+      <rect x="468" y="10" width="432" height="140" rx="10" fill="#F0EFFB" stroke="#897EF7"/>
+      <text x="684" y="85" font-family="Poppins,sans-serif" font-size="15" fill="#2D297C" text-anchor="middle">Right panel</text>
+    </svg>
+    <svg class="fig-dark" viewBox="0 0 900 160" role="img" aria-label="Placeholder diagram.">
+      <rect x="0" y="10" width="432" height="140" rx="10" fill="#1C1B2A" stroke="#3A384C"/>
+      <text x="216" y="85" font-family="Poppins,sans-serif" font-size="15" fill="#A9A7BC" text-anchor="middle">Left panel</text>
+      <rect x="468" y="10" width="432" height="140" rx="10" fill="#232041" stroke="#6C63F1"/>
+      <text x="684" y="85" font-family="Poppins,sans-serif" font-size="15" fill="#A79EFF" text-anchor="middle">Right panel</text>
+    </svg>
+    <figcaption>Caption: what the diagram proves, with a link to the deeper page.</figcaption>
+  </figure>
+</section>
+
+<!-- COMPONENT: numbered stage list (timeline / lifecycle / runbook) with status pills -->
+<section id="s2">
+  <div class="snum">02</div>
+  <h2>The timeline</h2>
+  <p class="lede">Each stage: who acts (.qop), what the system does (.qd), where to read more (.qlinks).</p>
+
+  <ol class="qs">
+    <li class="copyhost"><div class="qbody">
+      <div class="qt">Stage title</div>
+      <div class="qop">actor · surface</div>
+      <div class="qd">What the system does at this stage, with <strong>bold</strong> for the load-bearing term.</div>
+      <div class="qlinks">→ <a href="topics/example.html">Deeper page</a></div>
+    </div><span class="qpill pill firm">delivered</span></li>
+    <li class="copyhost"><div class="qbody">
+      <div class="qt">A conditional stage</div>
+      <div class="qop">automatic · subsystem</div>
+      <div class="qd">Pill variants: firm (solid indigo), cond (dashed outline), stop (red).</div>
+    </div><span class="qpill pill cond">in flight</span></li>
+    <li class="blocked copyhost"><div class="qbody">
+      <div class="qt">The blocked edge</div>
+      <div class="qop">waiting · named blocker</div>
+      <div class="qd">li.blocked turns the number red. Say exactly what unblocks it.</div>
+    </div><span class="qpill pill stop">blocked</span></li>
+  </ol>
+
+  <!-- COMPONENT: link card grid, grouped by h3 -->
+  <h3>Group name</h3>
+  <div class="grid g3">
+    <div class="card copyhost"><h4><a href="topics/example.html">Card title as link</a></h4><p>One-line teaser for the sub-page.</p></div>
+    <div class="card copyhost"><h4><a href="topics/example.html">Another card</a></h4><p>Keep teasers under two lines.</p></div>
+  </div>
+</section>
+
+<section id="s3">
+  <div class="snum">03</div>
+  <h2>More components</h2>
+  <p class="lede">Callout variants, phase headings, list cards, definition rows, tables, question lists, Gantt figures.</p>
+
+  <!-- COMPONENT: callout variants — default (indigo tint), plain (grey), dark (solid indigo, for the decision that ends a debate) -->
+  <div class="callout plain">
+    <div class="tag">Timing rule</div>
+    <p>Plain variant: a quieter aside — conventions, timing rules, footnote-grade caveats.</p>
+  </div>
+  <div class="callout dark">
+    <div class="tag">Decision structure</div>
+    <p><strong>Dark variant carries the decision.</strong> Use once per page at most.</p>
+  </div>
+
+  <!-- COMPONENT: phase heading — pill + title; firm = committed, cond = conditional, stop = blocked -->
+  <h3><span class="pill firm">Committed</span> &nbsp;Phase 1 — Name</h3>
+  <p>Phase body text.</p>
+
+  <!-- COMPONENT: list cards — g4 for service catalogues, g2 for risk pairs; card ul for enumerations; card.tinted for the highlighted one -->
+  <div class="grid g4">
+    <div class="card">
+      <h4>Group name</h4>
+      <ul><li>First item</li><li>Second item</li><li>Third item</li></ul>
+    </div>
+    <div class="card">
+      <h4>Another group</h4>
+      <ul><li>Items stay short</li><li>Three to four per card</li></ul>
+    </div>
+    <div class="card tinted">
+      <h4>Highlighted group</h4>
+      <p>Tinted variant for the one that matters most.</p>
+    </div>
+    <div class="card">
+      <h4><span class="swatch s-err"></span>Risk card</h4>
+      <p>A swatch in the h4 grades the risk: err, warn, neutral.</p>
+    </div>
+  </div>
+
+  <!-- COMPONENT: definition rows — key/value rubric; swatch in the key carries status -->
+  <div class="rows">
+    <div class="row">
+      <div class="k"><span class="swatch s-ok"></span>Clear candidates</div>
+      <div class="v">The enumerated things this row covers.<br><em>An italic note on why they belong here.</em></div>
+    </div>
+    <div class="row">
+      <div class="k"><span class="swatch s-warn"></span>Middle tier</div>
+      <div class="v">Rows read as a rubric: predictable keys, honest values.</div>
+    </div>
+    <div class="row">
+      <div class="k"><span class="swatch s-err"></span>Excluded</div>
+      <div class="v">Say what is out of scope and why.</div>
+    </div>
+  </div>
+
+  <!-- COMPONENT: table — td.num for numeric columns -->
+  <table>
+    <thead><tr><th>Item</th><th>Owner</th><th>Cost</th></tr></thead>
+    <tbody>
+      <tr><td>First row</td><td>Group</td><td class="num">1,240</td></tr>
+      <tr><td>Second row</td><td>Company</td><td class="num">380</td></tr>
+    </tbody>
+  </table>
+
+  <!-- COMPONENT: simple numbered question list — ol.qs WITHOUT qbody/qpill -->
+  <h3>Five questions before any component moves</h3>
+  <ol class="qs">
+    <li>First question, one line?</li>
+    <li>Second question?</li>
+    <li><span><strong>A decision</strong> — with a clause of supporting detail.</span></li>
+  </ol>
+
+  <!-- COMPONENT: Gantt figure — hard-coded palette hexes are fine inside SVG -->
+  <figure>
+    <svg viewBox="0 0 900 130" role="img" aria-label="Example Gantt: phase one months 0 to 3, phase two months 3 to 9.">
+      <g font-family="Poppins,sans-serif">
+        <g stroke="#EBEBEB"><line x1="200" y1="26" x2="200" y2="104"/><line x1="433" y1="26" x2="433" y2="104"/><line x1="666" y1="26" x2="666" y2="104"/><line x1="899" y1="26" x2="899" y2="104"/></g>
+        <g font-size="11" fill="#A3A3A3" text-anchor="middle"><text x="200" y="16">Month 0</text><text x="433" y="16">M6</text><text x="666" y="16">M12</text><text x="888" y="16">M18</text></g>
+        <g font-size="12" fill="#1A1A1A" text-anchor="end"><text x="186" y="48">Phase one</text><text x="186" y="86">Phase two</text></g>
+        <rect x="200" y="32" width="116" height="22" rx="5" fill="#2D297C"/>
+        <rect x="316" y="70" width="233" height="22" rx="5" fill="#6C63F1"/>
+        <g font-size="11" font-weight="600" fill="#fff"><text x="210" y="47">3 mo</text><text x="326" y="85">6 mo</text></g>
+      </g>
+    </svg>
+    <figcaption>Bars use the indigo ramp (#2D297C → #6C63F1 → #897EF7); green #1AA785 marks the payoff bar. Note: hard-coded hexes don't adapt to dark mode — provide a .fig-dark twin for dark-critical pages.</figcaption>
+  </figure>
+
+  <!-- COMPONENT: flow diagram — boxes + arrows + a dashed boundary; the simplest diagram shape -->
+  <figure>
+    <svg viewBox="0 0 900 190" role="img" aria-label="Flow: input goes to processor, processor to output; a dashed boundary separates the group side from the company side.">
+      <g font-family="Poppins,sans-serif">
+        <rect x="10" y="55" width="190" height="66" rx="9" fill="#FBFBFB" stroke="#D1D1D1"/>
+        <text x="105" y="83" font-size="13.5" font-weight="600" fill="#1A1A1A" text-anchor="middle">Input</text>
+        <text x="105" y="103" font-size="11.5" fill="#575757" text-anchor="middle">one line of context</text>
+        <rect x="355" y="55" width="190" height="66" rx="9" fill="#F0EFFB" stroke="#897EF7"/>
+        <text x="450" y="83" font-size="13.5" font-weight="600" fill="#2D297C" text-anchor="middle">Processor</text>
+        <text x="450" y="103" font-size="11.5" fill="#575757" text-anchor="middle">the accent-tinted step</text>
+        <rect x="700" y="55" width="190" height="66" rx="9" fill="#2D297C"/>
+        <text x="795" y="83" font-size="13.5" font-weight="600" fill="#FFFFFF" text-anchor="middle">Output</text>
+        <text x="795" y="103" font-size="11.5" fill="#C9C4FA" text-anchor="middle">solid indigo = result</text>
+        <g stroke="#6C63F1" stroke-width="1.5" fill="none">
+          <path d="M200 88 L347 88 M340 82 L348 88 L340 94"/>
+          <path d="M545 88 L692 88 M685 82 L693 88 L685 94"/>
+        </g>
+        <line x1="278" y1="18" x2="278" y2="162" stroke="#897EF7" stroke-width="1.5" stroke-dasharray="6 5"/>
+        <text x="270" y="180" font-size="11" font-weight="600" fill="#2D297C" text-anchor="end">OUTSIDE</text>
+        <text x="288" y="180" font-size="11" font-weight="600" fill="#2D297C">INSIDE THE BOUNDARY</text>
+      </g>
+    </svg>
+    <figcaption>The basic diagram vocabulary: neutral box (grey stroke) → tinted box (accent) → solid box (result); dashed line = a boundary. Compose bigger diagrams from only these.</figcaption>
+  </figure>
+</section>
+
+<section id="s4">
+  <div class="snum">04</div>
+  <h2>Analysis components</h2>
+  <p class="lede">Stat ledger, verdicts, corrections, milestones, compare columns, decisions, options, chains, register rows, arrow lists, evidence.</p>
+
+  <!-- COMPONENT: stat ledger — 3-5 headline numbers -->
+  <dl class="stats">
+    <div class="stat"><dt>Shipping</dt><dd>0.1.70<small>context under the number</small></dd></div>
+    <div class="stat"><dt>Open items</dt><dd class="ind">42<small>across 35 endpoints</small></dd></div>
+    <div class="stat"><dt>Verified good</dt><dd class="ok">171<small>headline proof</small></dd></div>
+    <div class="stat"><dt>Blocked</dt><dd class="err">4<small>waiting on a ruling</small></dd></div>
+  </dl>
+
+  <!-- COMPONENT: verdict cards — question / colored answer / basis -->
+  <div class="verdicts">
+    <div class="verdict"><p class="q">Q1 · short form of the question</p><p class="a yes">Yes — everywhere</p><p class="d">One or two sentences of basis; the color answers before the words do.</p></div>
+    <div class="verdict"><p class="q">Q2 · another question</p><p class="a no">No</p><p class="d">Say what was checked and what was absent.</p></div>
+    <div class="verdict"><p class="q">Q3 · a mixed one</p><p class="a part">Partially</p><p class="d">Partial verdicts get warn coloring, not a hedge paragraph.</p></div>
+  </div>
+
+  <!-- COMPONENT: correction block — replaced wrong claims; put FIRST when it exists -->
+  <div class="correction">
+    <b>Corrected before publication.</b> Why these are listed — a reader who followed the old claim meets the correction here.
+    <ol>
+      <li><b>"The wrong claim, quoted"</b> — what was actually true, and how the error happened.</li>
+      <li><b>"Another one"</b> — corrections carry the same evidence standard as the rest of the page.</li>
+    </ol>
+  </div>
+
+  <!-- COMPONENT: milestone timeline — dated dots; "cut" marks a removal -->
+  <h3>Milestones</h3>
+  <ul class="milestones">
+    <li><span class="d">2026-05-19</span>What happened on that date <span class="sha">repo abc1234</span></li>
+    <li class="cut"><span class="d">2026-06-22</span><strong>The removal.</strong> Red dot for the event that undid something <span class="sha">def5678</span></li>
+    <li><span class="d">2026-08-11</span>The most recent state <span class="sha">0a1b2c3</span></li>
+  </ul>
+
+  <!-- COMPONENT: compare columns — same list side by side; .only + .flag mark differences -->
+  <div class="compare-cols">
+    <div class="ccol"><div class="hd">Variant A · source ref</div>
+      <ol>
+        <li>A shared item, identical in both</li>
+        <li class="only">An item only this side has <span class="flag">a-only</span></li>
+        <li>Another shared item <span class="flag warn">stale text</span></li>
+      </ol></div>
+    <div class="ccol"><div class="hd">Variant B · source ref</div>
+      <ol>
+        <li>A shared item, identical in both</li>
+        <li class="only">B's unique item <span class="flag">b-only</span></li>
+      </ol></div>
+  </div>
+
+  <!-- COMPONENT: decision cards — numbered rulings; .lean carries the recommendation -->
+  <div class="decision"><div class="id">D1</div><div><h3>The decision, named</h3><p>What it decides and what depends on it.</p><p class="lean">The lean: which way the evidence points, stated as a recommendation, not a ruling.</p></div></div>
+  <div class="decision"><div class="id">D2</div><div><h3>Another ruling</h3><p>Keep each card to one decision; a card deciding two things is two cards.</p></div></div>
+
+  <!-- COMPONENT: option compare — pro/con lists; top bar rec | warn | no -->
+  <div class="opts">
+    <div class="opt rec">
+      <div class="tt">Recommended <span class="pill firm">split out</span></div>
+      <h3>The option's name</h3>
+      <p>One-paragraph description of what this option is.</p>
+      <ul>
+        <li class="pro"><strong>Named advantage.</strong> Why it matters.</li>
+        <li class="pro"><strong>Second advantage.</strong> Each pro/con is one claim.</li>
+        <li class="con"><strong>Honest cost.</strong> A recommendation without a stated cost reads as advocacy.</li>
+      </ul>
+    </div>
+    <div class="opt warn">
+      <div class="tt">Alternative <span class="pill cond">keep as-is</span></div>
+      <h3>The other option</h3>
+      <p>Give the alternative an honest case.</p>
+      <ul>
+        <li class="pro"><strong>Its real advantage.</strong></li>
+        <li class="con"><strong>Why it loses.</strong> The comparison should make the lean legible.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- COMPONENT: signal-chain lanes — hop sequences; spine + last hop tell the story -->
+  <div class="chain">
+    <div class="chain-lane works">
+      <div class="lt">Lane that works</div>
+      <div class="hops">
+        <span class="hop good">first hop</span><span class="arr">→</span>
+        <span class="hop good">second hop</span><span class="arr">→</span>
+        <span class="hop good">delivered</span>
+      </div>
+    </div>
+    <div class="chain-lane broken">
+      <div class="lt">Lane that breaks</div>
+      <div class="hops">
+        <span class="hop good">first hop</span><span class="arr">→</span>
+        <span class="hop dead">the dead hop — name what is missing</span>
+      </div>
+      <p class="note">Optional note: what was checked to prove the break.</p>
+    </div>
+  </div>
+
+  <!-- COMPONENT: register rows — work items with citations + status chips; end with the legend -->
+  <div class="register">
+    <div class="item copyhost">
+      <div>
+        <p class="row-title">The work item, titled as a claim</p>
+        <p class="row-body">What it is, what blocks it, what unblocks it — two sentences.</p>
+        <p class="cite"><b>path/to/file.ts</b>:407,419 · <b>other/file.tsx</b>:28</p>
+      </div>
+      <div class="tags"><span class="rchip blocked">Decision</span><span class="rchip size">L</span></div>
+    </div>
+    <div class="item copyhost">
+      <div>
+        <p class="row-title">A buildable item</p>
+        <p class="row-body">Chips: blocked / open / done / unver(ified) + a size chip.</p>
+        <p class="cite"><b>ui/src/pages/example.tsx</b>:237</p>
+      </div>
+      <div class="tags"><span class="rchip open">Open</span><span class="rchip size">S</span></div>
+    </div>
+  </div>
+  <div class="chip-legend">
+    <span><span class="rchip blocked">Decision</span> needs a ruling</span>
+    <span><span class="rchip open">Open</span> buildable now</span>
+    <span><span class="rchip done">Done</span> verified closed</span>
+    <span><span class="rchip unver">Unverified</span> asserted, not confirmed</span>
+  </div>
+
+  <!-- COMPONENT: arrow lists — next steps (→) and open questions (?) -->
+  <h3>Next steps</h3>
+  <ul class="arrows">
+    <li><strong>First step</strong> — what it produces.</li>
+    <li><strong>Second step</strong> — arrow lists are for sequences the reader acts on.</li>
+  </ul>
+  <h3>Open questions</h3>
+  <ul class="arrows ask">
+    <li><strong>The question.</strong> Who owns the answer and what it unblocks.</li>
+  </ul>
+
+  <!-- COMPONENT: evidence index — dense file:line references inside a fold -->
+  <details class="fold" open>
+    <summary>Load-bearing file:line references</summary>
+    <div><ul class="ev">
+      <li><b>Topic one</b> — <code>src/thing.ts:26-31,81</code>; <code>src/daemon.ts:5180-5186</code>.</li>
+      <li><b>Topic two</b> — <code>bin/script.sh:1646-1675</code>; shipped <code>abc1234</code> (2026-08-07).</li>
+    </ul></div>
+  </details>
+</section>
+
+<!-- ══ SLOT: footer ══ -->
+<footer class="end">
+  <div class="rule"></div>
+  <!-- SLOT: logo — if ~/.claude/skills/hsdk-private-docs/logo.svg exists, inline its
+       contents here (class="logo") instead of the HSDK placeholder below. -->
+  <svg class="logo" viewBox="0 0 132 32" role="img" aria-label="HSDK" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="1" width="130" height="30" rx="7" fill="none" stroke="currentColor" stroke-width="2"/><text x="69" y="21.5" text-anchor="middle" font-family="ui-monospace,Consolas,monospace" font-size="14" font-weight="700" letter-spacing="6" fill="currentColor">HSDK</text></svg>
+  Generated YYYY-MM-DD from pinned commits. Optional related links.
+</footer>
+
+</main>
+</div>
+
+<script>
+  /* theme switch — change KEY per project; syncs both control instances */
+  (function () {
+    var root = document.documentElement;
+    var KEY = "template-cto-theme";
+    var buttons = document.querySelectorAll(".theme-switch button");
+    function stored() {
+      try { return localStorage.getItem(KEY); } catch (e) { return null; }
+    }
+    function apply(mode) {
+      if (mode === "light" || mode === "dark") {
+        root.setAttribute("data-theme", mode);
+      } else {
+        root.removeAttribute("data-theme");
+        mode = "auto";
+      }
+      buttons.forEach(function (b) {
+        b.setAttribute("aria-pressed", String(b.getAttribute("data-set") === mode));
+      });
+    }
+    buttons.forEach(function (b) {
+      b.addEventListener("click", function () {
+        var mode = b.getAttribute("data-set");
+        try {
+          if (mode === "auto") localStorage.removeItem(KEY);
+          else localStorage.setItem(KEY, mode);
+        } catch (e) { /* private mode: theme still applies for this page view */ }
+        apply(mode);
+      });
+    });
+    apply(stored());
+  })();
+
+  /* mobile menu: close on outside click / Escape / link click */
+  (function () {
+    var menu = document.getElementById("pagesMenu");
+    if (!menu) return;
+    document.addEventListener("click", function (e) {
+      if (menu.open && !menu.contains(e.target)) menu.open = false;
+    });
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") menu.open = false;
+    });
+    menu.querySelectorAll("a").forEach(function (a) {
+      a.addEventListener("click", function () { menu.open = false; });
+    });
+  })();
+
+  /* copy buttons — injected into every .copyhost */
+  (function () {
+    var ICON_COPY = '<svg class="ic-copy" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+    var ICON_CHECK = '<svg class="ic-check" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5"/></svg>';
+    function copyText(text, done) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done, function () { fallback(text, done); });
+      } else {
+        fallback(text, done);
+      }
+    }
+    function fallback(text, done) {
+      var ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand("copy"); } catch (e) { /* nothing more to try */ }
+      document.body.removeChild(ta);
+      done();
+    }
+    document.querySelectorAll(".copyhost").forEach(function (host) {
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "copybtn";
+      btn.setAttribute("aria-label", "Copy this block's text");
+      btn.title = "Copy text";
+      btn.innerHTML = ICON_COPY + ICON_CHECK;
+      btn.addEventListener("click", function () {
+        var clone = host.cloneNode(true);
+        var b = clone.querySelector(".copybtn");
+        if (b) b.remove();
+        var text = clone.innerText.replace(/\n{3,}/g, "\n\n").trim();
+        copyText(text, function () {
+          btn.classList.add("copied");
+          setTimeout(function () { btn.classList.remove("copied"); }, 1400);
+        });
+      });
+      host.appendChild(btn);
+    });
+  })();
+</script>

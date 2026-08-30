@@ -1,0 +1,118 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Resolve repo root (script lives in bin/)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+CLAUDE_SKILLS="$HOME/.claude/skills"
+CURSOR_SKILLS="$HOME/.cursor/skills"
+AGENTS_SKILLS="$HOME/.agents/skills"
+CLAUDE_STYLES="$HOME/.claude/output-styles"
+SKILLS=("architecture-audit" "security-audit" "make-agents-md" "make-readme-html" "token-calculation" "token-playbook-calculation" "explainer")
+TS="$(date +%Y%m%d-%H%M%S)"
+
+mkdir -p "$CLAUDE_SKILLS"
+
+backup_if_exists() {
+  local target="$1"
+  if [[ -e "$target" && ! -L "$target" ]]; then
+    local backup="${target}.backup-${TS}"
+    echo "  Backing up existing $target → $backup"
+    mv "$target" "$backup"
+  elif [[ -L "$target" ]]; then
+    rm "$target"
+  fi
+}
+
+link_skill() {
+  local host_dir="$1" name="$2"
+  local target="$host_dir/$name"
+  local source="${3:-$REPO_ROOT/skills/$name}"
+
+  backup_if_exists "$target"
+  ln -snf "$source" "$target"
+  echo "  ✓ $target → $source"
+}
+
+# Remove * symlinks whose target inside this repo no longer exists — a renamed skill
+# leaves its old link behind, and the SKILLS list no longer knows the old name.
+prune_dangling() {
+  local host_dir="$1" l
+  for l in "$host_dir"/*; do
+    [[ -L "$l" && ! -e "$l" ]] || continue
+    case "$(readlink "$l")" in
+      *"/../"*|*"/.."|*"/./"*|*"/.") ;;   # not a plain path — leave it alone
+      "$REPO_ROOT"/*) rm "$l"; echo "  ✓ Pruned dangling $l" ;;
+    esac
+  done
+}
+
+link_style() {
+  local file="$1"
+  local name; name="$(basename "$file")"
+  local target="$CLAUDE_STYLES/$name"
+
+  backup_if_exists "$target"
+  ln -snf "$file" "$target"
+  echo "  ✓ $target → $file"
+}
+
+echo "Installing hsdk skills from $REPO_ROOT"
+echo
+echo "Claude Code:"
+for s in "${SKILLS[@]}"; do
+  link_skill "$CLAUDE_SKILLS" "$s"
+done
+# Shared HTML templates — not a skill, but skills read them at runtime.
+link_skill "$CLAUDE_SKILLS" "hsdk-templates" "$REPO_ROOT/templates"
+# Private company overlays (gitignored) — see private-docs/README.md.
+link_skill "$CLAUDE_SKILLS" "hsdk-private-docs" "$REPO_ROOT/private-docs"
+prune_dangling "$CLAUDE_SKILLS"
+
+if [[ -d "$HOME/.cursor" ]]; then
+  echo
+  echo "Cursor:"
+  mkdir -p "$CURSOR_SKILLS"
+  for s in "${SKILLS[@]}"; do
+    link_skill "$CURSOR_SKILLS" "$s"
+  done
+  link_skill "$CURSOR_SKILLS" "hsdk-templates" "$REPO_ROOT/templates"
+  link_skill "$CURSOR_SKILLS" "hsdk-private-docs" "$REPO_ROOT/private-docs"
+  prune_dangling "$CURSOR_SKILLS"
+else
+  echo
+  echo "Cursor not detected (~/.cursor missing). Skipping."
+fi
+
+# Agent Skills cross-runtime alias (agentskills.io) — Codex, Copilot CLI, Gemini CLI
+# and other compatible harnesses read ~/.agents/skills.
+if [[ -d "$HOME/.agents" || -d "$HOME/.codex" || -d "$HOME/.gemini" || -d "$HOME/.copilot" ]]; then
+  echo
+  echo "Agent Skills alias (~/.agents/skills — Codex, Copilot, Gemini, ...):"
+  mkdir -p "$AGENTS_SKILLS"
+  for s in "${SKILLS[@]}"; do
+    link_skill "$AGENTS_SKILLS" "$s"
+  done
+  link_skill "$AGENTS_SKILLS" "hsdk-templates" "$REPO_ROOT/templates"
+  link_skill "$AGENTS_SKILLS" "hsdk-private-docs" "$REPO_ROOT/private-docs"
+  prune_dangling "$AGENTS_SKILLS"
+else
+  echo
+  echo "No Agent Skills harness detected (~/.agents, ~/.codex, ~/.gemini, ~/.copilot all missing). Skipping."
+fi
+
+# Output styles — Claude Code only; Cursor has no equivalent.
+if compgen -G "$REPO_ROOT/output-styles/*.md" > /dev/null; then
+  echo
+  echo "Output styles (Claude Code):"
+  mkdir -p "$CLAUDE_STYLES"
+  for f in "$REPO_ROOT"/output-styles/*.md; do
+    link_style "$f"
+  done
+  echo "  Activate with /output-style — installing does not select one."
+fi
+
+echo
+echo "Done. Restart Claude Code (and Cursor if running) to pick up the skills."
+echo "Verify with: ls -l ~/.claude/skills"

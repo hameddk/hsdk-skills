@@ -1,0 +1,87 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+CLAUDE_SKILLS="$HOME/.claude/skills"
+CURSOR_SKILLS="$HOME/.cursor/skills"
+AGENTS_SKILLS="$HOME/.agents/skills"
+CLAUDE_STYLES="$HOME/.claude/output-styles"
+SKILLS=("architecture-audit" "security-audit" "make-agents-md" "make-readme-html" "token-calculation" "token-playbook-calculation" "explainer")
+
+# Remove * symlinks whose target inside this repo no longer exists — a renamed skill
+# leaves its old link behind, and the SKILLS list no longer knows the old name.
+prune_dangling() {
+  local host_dir="$1" l
+  for l in "$host_dir"/*; do
+    [[ -L "$l" && ! -e "$l" ]] || continue
+    case "$(readlink "$l")" in
+      *"/../"*|*"/.."|*"/./"*|*"/.") ;;   # not a plain path — leave it alone
+      "$REPO_ROOT"/*) rm "$l"; echo "  ✓ Pruned dangling $l" ;;
+    esac
+  done
+}
+
+remove_link() {
+  local host_dir="$1" name="$2"
+  local target="$host_dir/$name"
+  if [[ -L "$target" ]]; then
+    rm "$target"
+    echo "  ✓ Removed $target"
+  elif [[ -e "$target" ]]; then
+    echo "  ⚠ $target exists but is not a symlink. Leaving it alone."
+  fi
+}
+
+echo "Uninstalling hsdk skills"
+echo
+echo "Claude Code:"
+for s in "${SKILLS[@]}"; do
+  remove_link "$CLAUDE_SKILLS" "$s"
+done
+remove_link "$CLAUDE_SKILLS" "hsdk-templates"
+remove_link "$CLAUDE_SKILLS" "hsdk-private-docs"
+prune_dangling "$CLAUDE_SKILLS"
+
+if [[ -d "$CURSOR_SKILLS" ]]; then
+  echo
+  echo "Cursor:"
+  for s in "${SKILLS[@]}"; do
+    remove_link "$CURSOR_SKILLS" "$s"
+  done
+  remove_link "$CURSOR_SKILLS" "hsdk-templates"
+  remove_link "$CURSOR_SKILLS" "hsdk-private-docs"
+  prune_dangling "$CURSOR_SKILLS"
+fi
+
+if [[ -d "$AGENTS_SKILLS" ]]; then
+  echo
+  echo "Agent Skills alias (~/.agents/skills):"
+  for s in "${SKILLS[@]}"; do
+    remove_link "$AGENTS_SKILLS" "$s"
+  done
+  remove_link "$AGENTS_SKILLS" "hsdk-templates"
+  remove_link "$AGENTS_SKILLS" "hsdk-private-docs"
+  prune_dangling "$AGENTS_SKILLS"
+fi
+
+# Output styles — only ever removes symlinks whose target is this repo's output-styles/ directory.
+if [[ -d "$CLAUDE_STYLES" ]]; then
+  echo
+  echo "Output styles:"
+  for target in "$CLAUDE_STYLES"/*.md; do
+    [[ -L "$target" ]] || continue
+    dest="$(readlink "$target")"
+    case "$dest" in
+      *"/../"*|*"/.."|*"/./"*|*"/.") ;;   # not a plain path — leave it alone
+      "$REPO_ROOT"/output-styles/*)
+        rm "$target"
+        echo "  ✓ Removed $target"
+        ;;
+    esac
+  done
+fi
+
+echo
+echo "Done."

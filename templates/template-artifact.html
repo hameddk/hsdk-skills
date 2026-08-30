@@ -1,0 +1,1023 @@
+<meta charset="utf-8">
+<title>PAGE TITLE</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!--
+  hsdk slate template — see the README.md next to this file for the full guide.
+
+  How to use this file:
+    1. Copy it next to your output, rename it.
+    2. Fill every SLOT comment.
+    3. Delete every COMPONENT block you do not need (each is self-contained).
+    4. Keep the three KEEP blocks (tokens, base, scripts) intact.
+  Rules that are not yours to change: charset stays line 1; no external
+  resources of any kind; links relative; the finished file must open from
+  file:// with no server and read correctly in light and dark.
+-->
+<style>
+  /* ══ KEEP: design tokens (contract in README.md — do not fork per page) ══ */
+  :root {
+    /* light palette — cool slate neutrals, one teal accent, status hues */
+    --ground: #E9ECF0;
+    --surface: #FDFDFE;
+    --surface-2: #F2F4F7;
+    --ink: #171B22;
+    --ink-soft: #4C555F;
+    --ink-faint: #7C858F;
+    --line: #D3D9DF;
+    --line-strong: #BEC6CE;
+    --accent: #0C8686;
+    --accent-ink: #075E5E;
+    --accent-soft: rgba(12, 134, 134, 0.11);
+    --ok: #1E8E3E;
+    --ok-soft: rgba(30, 142, 62, 0.13);
+    --warn: #B26C08;
+    --warn-soft: rgba(178, 108, 8, 0.14);
+    --danger: #B3382E;
+    --danger-soft: rgba(179, 56, 46, 0.12);
+    --shadow: 0 1px 2px rgba(20, 28, 38, 0.05), 0 6px 20px rgba(20, 28, 38, 0.06);
+    --mono: ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono", "Roboto Mono", Consolas, monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0E1218;
+      --surface: #161B22;
+      --surface-2: #1C222B;
+      --ink: #DEE4EB;
+      --ink-soft: #9BA6B2;
+      --ink-faint: #6D7783;
+      --line: #262E38;
+      --line-strong: #333D49;
+      --accent: #2FB8B0;
+      --accent-ink: #6ED4CD;
+      --accent-soft: rgba(47, 184, 176, 0.14);
+      --ok: #4FBE6E;
+      --ok-soft: rgba(79, 190, 110, 0.15);
+      --warn: #D99A3D;
+      --warn-soft: rgba(217, 154, 61, 0.15);
+      --danger: #E06C5F;
+      --danger-soft: rgba(224, 108, 95, 0.15);
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 6px 20px rgba(0, 0, 0, 0.35);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #0E1218;
+    --surface: #161B22;
+    --surface-2: #1C222B;
+    --ink: #DEE4EB;
+    --ink-soft: #9BA6B2;
+    --ink-faint: #6D7783;
+    --line: #262E38;
+    --line-strong: #333D49;
+    --accent: #2FB8B0;
+    --accent-ink: #6ED4CD;
+    --accent-soft: rgba(47, 184, 176, 0.14);
+    --ok: #4FBE6E;
+    --ok-soft: rgba(79, 190, 110, 0.15);
+    --warn: #D99A3D;
+    --warn-soft: rgba(217, 154, 61, 0.15);
+    --danger: #E06C5F;
+    --danger-soft: rgba(224, 108, 95, 0.15);
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 6px 20px rgba(0, 0, 0, 0.35);
+  }
+
+  /* ══ KEEP: base ══ */
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font: 15px/1.6 var(--sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  .page { max-width: 1120px; margin: 0 auto; padding: 34px 22px 90px; }
+  section { margin-top: 44px; scroll-margin-top: 66px; }
+  h2 { font-size: 19px; font-weight: 650; letter-spacing: -0.01em; margin: 0 0 4px; display: flex; align-items: center; gap: 10px; }
+  h3 { font-size: 15px; font-weight: 650; margin: 22px 0 8px; }
+  section > p, section > p.sub { max-width: none; color: var(--ink-soft); }
+  ul { padding-left: 20px; }
+  li { margin: 4px 0; color: var(--ink-soft); max-width: none; }
+  li b, p b { color: var(--ink); font-weight: 600; }
+  a { color: var(--accent-ink); }
+  code {
+    font: 0.92em var(--mono);
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    padding: 1px 5px;
+    white-space: nowrap;
+  }
+  .mono { font-family: var(--mono); }
+  hr { border: none; border-top: 1px solid var(--line); margin: 40px 0 0; }
+  .foot { margin-top: 14px; font-size: 12.5px; color: var(--ink-faint); }
+
+  /* ══ KEEP: top bar + theme switch ══ */
+  .topbar { position: sticky; top: 0; z-index: 50; background: var(--surface); border-bottom: 1px solid var(--line); }
+  .topbar-inner {
+    max-width: 1120px; margin: 0 auto;
+    display: flex; align-items: center; flex-wrap: wrap; gap: 2px 6px;
+    padding: 8px 22px;
+  }
+  .brand {
+    display: inline-flex; align-items: center; gap: 8px;
+    font: 650 13.5px/1 var(--sans); letter-spacing: -0.01em;
+    color: var(--ink); text-decoration: none; margin-right: 10px;
+  }
+  .brand svg { color: var(--accent); flex: none; }
+  .topnav { display: flex; align-items: center; gap: 2px; }
+  .topnav a, .menu summary {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 6px 9px; border-radius: 7px;
+    font: 600 12.5px/1 var(--sans); color: var(--ink-soft);
+    text-decoration: none; cursor: pointer;
+  }
+  .topnav a:hover, .menu summary:hover { background: var(--surface-2); color: var(--ink); }
+  .topnav a[aria-current="page"] { background: var(--accent-soft); color: var(--accent-ink); }
+  .topbar-spacer { flex: 1; }
+  .menu { position: relative; }
+  .menu summary { list-style: none; user-select: none; }
+  .menu summary::-webkit-details-marker { display: none; }
+  .menu summary::after { content: "▾"; font-size: 10px; color: var(--ink-faint); }
+  .menu[open] summary { background: var(--surface-2); color: var(--ink); }
+  .menu-panel {
+    position: absolute; right: 0; top: calc(100% + 8px);
+    width: min(92vw, 560px);
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: 12px; box-shadow: var(--shadow);
+    padding: 12px 14px;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 2px 18px;
+  }
+  .menu-panel .mp-group {
+    grid-column: 1 / -1;
+    font-size: 10.5px; font-weight: 650; letter-spacing: 0.09em; text-transform: uppercase;
+    color: var(--accent-ink); margin: 8px 0 2px;
+  }
+  .menu-panel .mp-group:first-child { margin-top: 0; }
+  .menu-panel a {
+    font: 500 12.5px/1.35 var(--sans); color: var(--ink-soft);
+    text-decoration: none; padding: 4px 7px; border-radius: 6px;
+  }
+  .menu-panel a:hover { background: var(--surface-2); color: var(--ink); }
+  .menu-panel .mp-foot {
+    grid-column: 1 / -1; margin-top: 8px; padding-top: 8px;
+    border-top: 1px solid var(--line); font-size: 12px; color: var(--ink-faint);
+  }
+  .menu-panel .mp-foot a { display: inline; padding: 2px 4px; }
+  .theme-switch {
+    display: inline-flex; border: 1px solid var(--line); border-radius: 999px;
+    background: var(--surface-2); overflow: hidden; margin-left: 8px;
+  }
+  .theme-switch button {
+    appearance: none; border: none; background: transparent; color: var(--ink-faint);
+    width: 30px; height: 26px;
+    display: inline-flex; align-items: center; justify-content: center; cursor: pointer;
+  }
+  .theme-switch button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent-ink); }
+  .theme-switch button:focus-visible { outline: 2px solid var(--accent); }
+  .theme-switch svg { display: block; }
+  /* COMPONENT: view switcher — only on sites that ship a knowledge map (template-map.html); delete with its markup */
+  .switch { display: inline-flex; flex: none; margin-left: 8px; border: 1px solid var(--line-strong); border-radius: 9px; overflow: hidden; background: var(--surface); }
+  .switch a { display: inline-flex; align-items: center; gap: 6px; padding: 6px 11px; font: 650 12px/1 var(--sans); color: var(--ink-soft); text-decoration: none; }
+  .switch a + a { border-left: 1px solid var(--line); }
+  .switch a svg { flex: none; }
+  .switch a:hover { color: var(--ink); background: var(--surface-2); }
+  .switch a.cur { background: var(--accent-soft); color: var(--accent-ink); }
+
+  /* ══ KEEP: copy buttons (add class "copyhost" to any block that earns one) ══ */
+  .copyhost { position: relative; padding-right: 40px; }
+  .copybtn {
+    position: absolute; top: 8px; right: 8px;
+    width: 26px; height: 26px;
+    display: inline-flex; align-items: center; justify-content: center;
+    border: 1px solid var(--line); border-radius: 7px;
+    background: var(--surface-2); color: var(--ink-faint);
+    cursor: pointer; opacity: 0; transition: opacity 0.12s ease; padding: 0;
+  }
+  .copyhost:hover .copybtn, .copybtn:focus-visible { opacity: 1; }
+  .copybtn:hover { color: var(--accent-ink); border-color: var(--line-strong); }
+  .copybtn:focus-visible { outline: 2px solid var(--accent); }
+  .copybtn .ic-check { display: none; color: var(--ok); }
+  .copybtn.copied .ic-check { display: block; }
+  .copybtn.copied .ic-copy { display: none; }
+  .copybtn.copied { opacity: 1; }
+  @media (hover: none) { .copybtn { opacity: 0.6; } }
+
+  /* ── COMPONENT styles: delete the rules for components you removed ── */
+
+  /* header (masthead) */
+  header.masthead { border-bottom: 2px solid var(--ink); padding-bottom: 22px; margin-bottom: 30px; }
+  header h1 {
+    font-size: clamp(30px, 5vw, 46px); line-height: 1.05; font-weight: 700;
+    letter-spacing: -0.02em; margin: 0 0 10px; text-wrap: balance;
+  }
+  .h1-sub { color: var(--accent-ink); }
+  .eyebrow {
+    font-size: 11px; font-weight: 650; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--accent-ink); margin: 0 0 12px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .eyebrow::before { content: ""; width: 26px; height: 2px; background: var(--accent); display: inline-block; }
+  .lede { color: var(--ink-soft); font-size: clamp(15px, 1.8vw, 16.5px); max-width: none; margin: 0 0 18px; }
+  .meta-row { display: flex; flex-wrap: wrap; gap: 8px 22px; margin: 0 0 18px; font: 12px/1.5 var(--mono); color: var(--ink-faint); }
+  .meta-row b { color: var(--ink-soft); font-weight: 600; }
+  .badges { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 8px; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 7px;
+    font: 600 12px/1 var(--sans); padding: 6px 10px; border-radius: 6px;
+    border: 1px solid var(--line); background: var(--surface); color: var(--ink-soft);
+    white-space: nowrap;
+  }
+  .badge::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex: none; }
+  .badge.ok { background: var(--ok-soft); border-color: transparent; color: var(--ok); }
+  .badge.warn { background: var(--warn-soft); border-color: transparent; color: var(--warn); }
+  .badge.danger { background: var(--danger-soft); border-color: transparent; color: var(--danger); }
+  .badge.accent { background: var(--accent-soft); border-color: transparent; color: var(--accent-ink); }
+  .badge .mono { font-family: var(--mono); font-weight: 500; }
+
+  /* status band — a colored left spine on tiles and stage cards */
+  .band-ok { --band: var(--ok); }
+  .band-warn { --band: var(--warn); }
+  .band-danger { --band: var(--danger); }
+  .band-accent { --band: var(--accent); }
+
+  /* at-a-glance tiles */
+  .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(232px, 1fr)); gap: 14px; margin: 14px 0 0; }
+  .tile {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+    padding: 15px 16px; box-shadow: var(--shadow); position: relative; overflow: hidden;
+  }
+  .tile::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--band, var(--line-strong)); }
+  .tile .t-label { font: 650 11px/1.3 var(--sans); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-faint); }
+  .tile .t-state { font-size: 16px; font-weight: 650; letter-spacing: -0.01em; margin: 7px 0 5px; line-height: 1.2; }
+  .tile .t-note { font-size: 12.5px; color: var(--ink-soft); line-height: 1.45; }
+  .tile .t-note a { color: inherit; }
+
+  /* numbered section heading (runbook phases / guide steps) */
+  .phase-no {
+    flex: none; width: 26px; height: 26px; border-radius: 8px;
+    display: inline-flex; align-items: center; justify-content: center;
+    font: 700 13px/1 var(--mono);
+    background: var(--accent-soft); color: var(--accent-ink);
+  }
+  .when { font-size: 12.5px; color: var(--ink-faint); margin: 0 0 14px 36px; }
+
+  /* callouts */
+  .callout { border-radius: 10px; padding: 12px 15px; margin: 12px 0; font-size: 13.5px; border: 1px solid transparent; }
+  .callout strong:first-child {
+    display: block; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 4px;
+  }
+  .callout.ok { background: var(--ok-soft); }
+  .callout.ok strong:first-child { color: var(--ok); }
+  .callout.warn { background: var(--warn-soft); }
+  .callout.warn strong:first-child { color: var(--warn); }
+  .callout.danger { background: var(--danger-soft); }
+  .callout.danger strong:first-child { color: var(--danger); }
+
+  /* command / code blocks */
+  pre {
+    background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--accent);
+    border-radius: 10px; box-shadow: var(--shadow);
+    padding: 14px 16px; margin: 10px 0 16px; overflow-x: auto;
+    font: 12.5px/1.65 var(--mono); color: var(--ink);
+  }
+  pre.danger { border-left-color: var(--danger); }
+  pre .c { color: var(--ink-faint); }        /* comment */
+  pre .out { color: var(--accent-ink); }     /* expected output */
+  pre code { background: none; border: none; padding: 0; white-space: inherit; }
+
+  /* tables */
+  .tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow); margin: 12px 0 6px; }
+  table { border-collapse: collapse; width: 100%; background: var(--surface); font-size: 13px; }
+  th, td { text-align: left; padding: 9px 13px; border-top: 1px solid var(--line); vertical-align: top; }
+  thead th {
+    border-top: none; background: var(--surface-2);
+    font-size: 11px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--ink-faint);
+  }
+  td code, td .m { font-family: var(--mono); font-size: 12px; white-space: nowrap; }
+  td { color: var(--ink-soft); }
+  td:first-child { color: var(--ink); }
+  td.k { font-weight: 600; color: var(--ink); white-space: nowrap; }
+  td .sub { display: block; color: var(--ink-faint); font-size: 12px; margin-top: 3px; font-weight: 400; }
+  .num-col { font-variant-numeric: tabular-nums; text-align: right; font-family: var(--mono); font-size: 12.5px; }
+
+  /* timeline */
+  .timeline { list-style: none; margin: 18px 0 0; padding: 0; position: relative; }
+  .timeline::before {
+    content: ""; position: absolute; left: 13px; top: 10px; bottom: 10px;
+    width: 2px; background: var(--line-strong);
+  }
+  .timeline li { position: relative; padding: 0 0 22px 46px; max-width: none; }
+  .timeline li:last-child { padding-bottom: 0; }
+  .stage-no {
+    position: absolute; left: 0; top: 0; width: 28px; height: 28px; border-radius: 8px; z-index: 1;
+    display: inline-flex; align-items: center; justify-content: center;
+    font: 700 13px/1 var(--mono);
+    background: var(--accent); color: #fff; border: none;
+    box-shadow: 0 0 0 3px var(--ground);
+  }
+  .timeline li.blocked .stage-no { background: var(--warn); color: #fff; }
+  .stage-card {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+    box-shadow: var(--shadow); padding: 12px 15px; position: relative; overflow: hidden;
+  }
+  .stage-card[class*="band-"]::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--band); }
+  .stage-card h3 { margin: 0 0 2px; font-size: 15px; font-weight: 650; }
+  .stage-card .op { margin: 0 0 6px; font-size: 12.5px; color: var(--ink-faint); }
+  .stage-card .sys { margin: 0; font-size: 13.5px; color: var(--ink-soft); max-width: none; }
+  .stage-card .sys b { color: var(--ink); font-weight: 600; }
+  .stage-card .links { margin: 8px 0 0; font-size: 12.5px; }
+  .stage-card .links a { margin-right: 12px; }
+
+  /* card grid (topic index, topology nodes) */
+  .group-eyebrow {
+    font-size: 11px; font-weight: 650; letter-spacing: 0.09em; text-transform: uppercase;
+    color: var(--accent-ink); margin: 22px 0 8px;
+  }
+  .topic-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px; }
+  .node {
+    border: 1px solid var(--line-strong); border-radius: 8px; padding: 9px 12px;
+    background: var(--surface); font-size: 12.5px; line-height: 1.45; box-shadow: var(--shadow);
+  }
+  .node b { display: block; font-size: 13px; font-weight: 650; margin-bottom: 1px; }
+  .node b a { text-decoration: none; }
+  .node b a:hover { text-decoration: underline; }
+  .node span { color: var(--ink-faint); font-size: 11.5px; }
+  .node.edge { border-color: var(--accent); background: var(--accent-soft); }
+  .node.data { border-style: dashed; }
+
+  /* thesis — the one-paragraph claim the page defends */
+  .thesis {
+    background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--accent);
+    border-radius: 10px; padding: 18px 22px; box-shadow: var(--shadow); margin: 18px 0;
+  }
+  .thesis p { max-width: none; margin: 0; color: var(--ink-soft); font-size: 14.5px; }
+  .thesis p + p { margin-top: 10px; }
+  .thesis strong { color: var(--accent-ink); }
+
+  /* stat ledger — headline numbers */
+  .stats {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1px;
+    background: var(--line); border: 1px solid var(--line); border-radius: 10px; overflow: hidden;
+    margin: 16px 0; box-shadow: var(--shadow);
+  }
+  .stat { background: var(--surface); padding: 14px 16px; margin: 0; }
+  .stat dt { font: 650 10.5px/1.3 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-faint); margin: 0 0 6px; }
+  .stat dd { margin: 0; font: 650 24px/1.1 var(--mono); letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+  .stat dd.ok { color: var(--ok); } .stat dd.danger { color: var(--danger); } .stat dd.accent { color: var(--accent-ink); }
+  .stat dd small { display: block; font: 400 12px/1.4 var(--sans); color: var(--ink-faint); margin-top: 3px; }
+
+  /* verdict cards — question / short answer / basis */
+  .verdicts { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); margin: 14px 0; }
+  .verdict { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 15px 17px; box-shadow: var(--shadow); }
+  .verdict .q { font: 650 10.5px/1.3 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-faint); margin: 0 0 7px; }
+  .verdict .a { font: 650 15px/1.3 var(--sans); margin: 0 0 6px; }
+  .verdict .a.yes { color: var(--ok); } .verdict .a.no { color: var(--danger); } .verdict .a.part { color: var(--warn); }
+  .verdict .d { margin: 0; font-size: 13px; color: var(--ink-soft); }
+
+  /* correction block — replaces earlier wrong claims, listed up front */
+  .correction { background: var(--warn-soft); border: 1px solid var(--warn); border-radius: 10px; padding: 14px 18px; font-size: 13.5px; margin: 12px 0; }
+  .correction > b:first-child { color: var(--warn); }
+  .correction ol { margin: 8px 0 0; padding-left: 20px; }
+  .correction li { margin: 6px 0; color: var(--ink-soft); max-width: none; }
+
+  /* milestone timeline — dated dots (distinct from the stage timeline) */
+  .milestones { list-style: none; margin: 14px 0 0; padding: 0; border-left: 2px solid var(--line-strong); }
+  .milestones li { position: relative; padding: 0 0 13px 22px; font-size: 13.5px; color: var(--ink-soft); max-width: none; }
+  .milestones li::before { content: ""; position: absolute; left: -6px; top: 6px; width: 10px; height: 10px; border-radius: 50%; background: var(--accent); border: 2px solid var(--ground); }
+  .milestones li.cut::before { background: var(--danger); }
+  .milestones .d { font: 600 12px/1 var(--mono); color: var(--accent-ink); margin-right: 8px; }
+  .milestones .sha { font: 400 12px/1 var(--mono); color: var(--ink-faint); }
+
+  /* compare columns — side-by-side ordered lists with per-item flags */
+  .compare-cols { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); margin: 14px 0; }
+  .ccol { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow); overflow: hidden; }
+  .ccol .hd { padding: 10px 14px; font: 650 11px/1.3 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; background: var(--surface-2); border-bottom: 1px solid var(--line); color: var(--ink-soft); }
+  .ccol ol { margin: 0; padding: 10px 14px 12px 32px; font-size: 13px; }
+  .ccol li { padding: 3px 0; color: var(--ink-soft); max-width: none; }
+  .ccol li.only { color: var(--ink); font-weight: 500; }
+  .ccol li .flag { font: 600 10px/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent-ink); margin-left: 8px; }
+  .ccol li .flag.warn { color: var(--warn); }
+
+  /* decision cards — numbered rulings someone must make */
+  .decision { display: grid; grid-template-columns: 52px 1fr; gap: 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 15px 17px; box-shadow: var(--shadow); }
+  .decision + .decision { margin-top: 10px; }
+  .decision .id { font: 700 20px/1 var(--mono); color: var(--accent-ink); }
+  .decision h3 { margin: 0 0 5px; font-size: 14.5px; }
+  .decision p { margin: 0; font-size: 13.5px; color: var(--ink-soft); max-width: none; }
+  .decision p + p { margin-top: 6px; }
+  .decision .lean { color: var(--ink); }
+
+  /* option compare — recommended vs alternative, pro/con lists; top bar carries the stance */
+  .opts { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; margin: 14px 0; }
+  .opt { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 18px 20px; box-shadow: var(--shadow); position: relative; overflow: hidden; }
+  .opt::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--line-strong); }
+  .opt.rec::before { background: var(--accent); } .opt.warn::before { background: var(--warn); } .opt.no::before { background: var(--danger); }
+  .opt .tt { font: 650 10.5px/1.3 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-faint); margin: 0 0 6px; display: flex; justify-content: space-between; gap: 10px; }
+  .opt h3 { font-size: 15.5px; margin: 0 0 8px; }
+  .opt p { font-size: 13.5px; color: var(--ink-soft); margin: 0 0 10px; }
+  .opt ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 7px; }
+  .opt li { position: relative; padding-left: 20px; font-size: 13px; color: var(--ink-soft); max-width: none; margin: 0; }
+  .opt li strong { color: var(--ink); }
+  .opt li.pro::before { content: "+"; position: absolute; left: 0; color: var(--ok); font: 650 13px/1.4 var(--mono); }
+  .opt li.con::before { content: "\2212"; position: absolute; left: 0; color: var(--danger); font: 650 13px/1.4 var(--mono); }
+
+  /* signal-chain lanes — hop sequences; the spine says works/broken */
+  .chain { display: flex; flex-direction: column; gap: 10px; margin: 14px 0; }
+  .chain-lane { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 15px 17px; box-shadow: var(--shadow); position: relative; overflow: hidden; }
+  .chain-lane::before { content: ""; position: absolute; top: 0; left: 0; bottom: 0; width: 3px; background: var(--line-strong); }
+  .chain-lane.works::before { background: var(--ok); } .chain-lane.broken::before { background: var(--danger); }
+  .chain-lane .lt { font: 650 11px/1.3 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 10px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .hops { display: flex; flex-wrap: wrap; gap: 7px; align-items: center; }
+  .hop { font: 500 12px/1.4 var(--mono); color: var(--ink-soft); background: var(--surface-2); border: 1px solid var(--line); border-radius: 7px; padding: 5px 9px; white-space: nowrap; }
+  .hop.good { border-color: var(--ok); color: var(--ink); }
+  .hop.dead { border-color: var(--danger); background: var(--danger-soft); color: var(--danger); font-weight: 650; }
+  .arr { color: var(--ink-faint); font: 400 13px/1 var(--mono); }
+  .chain-lane .note { font-size: 12.5px; color: var(--ink-soft); margin: 9px 0 0; }
+
+  /* register rows — work items: title, body, file:line citation, status chips right */
+  .register { margin-top: 14px; display: flex; flex-direction: column; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  .register .item { background: var(--surface); padding: 13px 16px; display: grid; grid-template-columns: 1fr auto; gap: 5px 16px; align-items: start; }
+  .register .row-title { font-weight: 620; font-size: 14px; margin: 0; color: var(--ink); }
+  .register .row-body { margin: 4px 0 0; color: var(--ink-soft); font-size: 13px; max-width: none; }
+  .register .cite { margin: 6px 0 0; font: 400 11.5px/1.5 var(--mono); color: var(--ink-faint); word-break: break-word; }
+  .register .cite b { color: var(--ink-soft); font-weight: 500; }
+  .register .tags { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+  .rchip { font: 500 10px/1 var(--mono); letter-spacing: 0.09em; text-transform: uppercase; padding: 4px 7px; border-radius: 4px; white-space: nowrap; }
+  .rchip.blocked { background: var(--danger-soft); color: var(--danger); }
+  .rchip.done { background: var(--ok-soft); color: var(--ok); }
+  .rchip.open { background: var(--accent-soft); color: var(--accent-ink); }
+  .rchip.size { background: transparent; color: var(--ink-faint); border: 1px solid var(--line); }
+  .rchip.unver { background: transparent; color: var(--warn); border: 1px dashed var(--warn); }
+  .chip-legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 12px; }
+  .chip-legend span { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-faint); }
+
+  /* arrow list — action/next-step list; .ask variant for open questions */
+  ul.arrows { margin: 10px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 10px; }
+  ul.arrows li { position: relative; padding-left: 26px; color: var(--ink-soft); font-size: 13.5px; max-width: none; margin: 0; }
+  ul.arrows li strong { color: var(--ink); }
+  ul.arrows li::before { content: "\2192"; position: absolute; left: 0; top: 0; color: var(--accent); font-family: var(--mono); }
+  ul.arrows.ask li::before { content: "?"; color: var(--warn); font-weight: 650; }
+
+  /* evidence list — dense file:line references, usually inside details.fold */
+  .ev { list-style: none; margin: 0; padding: 0; font-size: 12.5px; }
+  .ev li { padding: 5px 0; border-top: 1px solid var(--line); color: var(--ink-soft); max-width: none; margin: 0; }
+  .ev li:first-child { border-top: 0; }
+  .ev b { color: var(--ink); }
+
+  /* definition rows — key/value facts; swatch in the key gives it a status */
+  .swatch { display: inline-block; width: 12px; height: 12px; border-radius: 4px; margin-right: 9px; vertical-align: -1px; }
+  .s-ok { background: var(--ok); } .s-warn { background: var(--warn); } .s-danger { background: var(--danger); } .s-neutral { background: var(--ink-faint); } .s-accent { background: var(--accent); }
+  .rows { margin: 16px 0 6px; }
+  .row { display: flex; gap: 18px; padding: 13px 0; border-bottom: 1px solid var(--line); }
+  .row:last-child { border-bottom: 0; }
+  .row .k { flex: 0 0 210px; font-weight: 650; font-size: 13.5px; color: var(--ink); }
+  .row .v { font-size: 13.5px; color: var(--ink-soft); line-height: 1.55; max-width: none; }
+  .row .v em { color: var(--ink-faint); }
+
+  /* simple numbered list — questions, decisions, prerequisites */
+  ol.qs { list-style: none; counter-reset: q; padding: 0; margin: 14px 0 0; }
+  ol.qs li { counter-increment: q; display: flex; gap: 13px; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 14px; color: var(--ink-soft); max-width: none; }
+  ol.qs li:last-child { border-bottom: 0; }
+  ol.qs li::before {
+    content: counter(q); flex: 0 0 24px; height: 24px; border-radius: 7px;
+    background: var(--accent-soft); color: var(--accent-ink);
+    font: 650 12px/24px var(--mono); text-align: center; margin-top: 1px;
+  }
+
+  /* figure — inline SVG diagrams (Gantt bars, boundary maps, comparisons) */
+  figure { margin: 22px 0 18px; }
+  figure svg { width: 100%; height: auto; display: block; }
+  figcaption { font-size: 12.5px; color: var(--ink-faint); margin-top: 9px; }
+
+  /* trap (gotcha card) */
+  .trap {
+    background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--warn);
+    border-radius: 10px; padding: 13px 16px; margin: 10px 0; box-shadow: var(--shadow);
+  }
+  .trap h4 { margin: 0 0 4px; font-size: 13.5px; font-weight: 650; }
+  .trap p { margin: 0; font-size: 13px; color: var(--ink-soft); max-width: none; }
+
+  /* collapsible detail */
+  details.fold { border: 1px solid var(--line); border-radius: 10px; background: var(--surface); padding: 0; margin: 12px 0; }
+  details.fold summary {
+    cursor: pointer; padding: 11px 15px; font-size: 13.5px; font-weight: 600;
+    color: var(--accent-ink); list-style: none;
+  }
+  details.fold summary::before { content: "▸ "; }
+  details.fold[open] summary::before { content: "▾ "; }
+  details.fold > div { padding: 2px 15px 12px; border-top: 1px solid var(--line); }
+  details.fold summary:focus-visible { outline: 2px solid var(--accent); border-radius: 8px; }
+
+  /* ══ KEEP: print ══ */
+  @media print {
+    .topbar { display: none; }
+    body { background: #fff; }
+    .page { max-width: none; padding: 0; }
+    section { break-inside: auto; }
+    figure, .callout, .tile, .stage-card, .tablewrap, .trap { break-inside: avoid; }
+    a { color: var(--ink); text-decoration: none; }
+  }
+</style>
+
+<!-- ══ KEEP: top bar. SLOT: brand text, nav anchors, Pages dropdown entries. ══ -->
+<nav class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="#top">
+      <!-- SLOT: brand icon — any 16px inline SVG, stroke="currentColor" -->
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+      SITE NAME
+    </a>
+    <div class="topnav">
+      <!-- SLOT: 2-3 same-page anchors max; more belongs in the dropdown -->
+      <a href="#section-a">Section A</a>
+      <a href="#section-b">Section B</a>
+      <!-- COMPONENT: pages dropdown — delete on single-page sites -->
+      <details class="menu" id="pagesMenu">
+        <summary>Pages</summary>
+        <div class="menu-panel">
+          <div class="mp-group">Group name</div>
+          <a href="page-1.html">Page one</a>
+          <a href="page-2.html">Page two</a>
+          <div class="mp-foot">SLOT: optional footer link, e.g. an alternate view</div>
+        </div>
+      </details>
+    </div>
+    <div class="topbar-spacer"></div>
+    <!-- COMPONENT: view switcher — Map ⇄ Field guide. Keep ONLY when the site ships knowledge-map.html (built from template-map.html, which carries the mirrored control); delete otherwise. -->
+    <nav class="switch" aria-label="View">
+      <a href="knowledge-map.html">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5" cy="6" r="2.2"/><circle cx="19" cy="5" r="2.2"/><circle cx="12" cy="12" r="2.6"/><circle cx="5" cy="19" r="2.2"/><circle cx="19" cy="18" r="2.2"/><path d="M6.8 7.2 10 10.4M14 10.5l3.2-3.7M6.9 17.6l3.1-3.4M14.2 13.7l3 2.9"/></svg>
+        Map
+      </a>
+      <a class="cur" href="index.html" aria-current="page">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="1.5"/><path d="M7.5 8h9M7.5 12h9M7.5 16h5.5"/></svg>
+        Field guide
+      </a>
+    </nav>
+    <!-- KEEP: three-state theme switch (icons: sun / half-circle / moon) -->
+    <div class="theme-switch" role="group" aria-label="Theme">
+      <button type="button" data-set="light" aria-label="Light theme" title="Light">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+      </button>
+      <button type="button" data-set="auto" aria-label="Follow system theme" title="Auto (system)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor" stroke="none"/></svg>
+      </button>
+      <button type="button" data-set="dark" aria-label="Dark theme" title="Dark">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<div class="page" id="top">
+
+<!-- ══ SLOT: header — masthead: eyebrow, big h1 (optional accent .h1-sub line), lede, mono meta-row, badge legend ══ -->
+<header class="masthead">
+  <p class="eyebrow">KICKER · context line</p>
+  <h1>Page title,<br><span class="h1-sub">accented second line</span></h1>
+  <p class="lede">One or two sentences saying what this page is and who it serves.</p>
+  <div class="meta-row">
+    <span><b>Date</b> 2026-08-28</span>
+    <span><b>Baseline</b> repo <span class="mono">abc1234</span></span>
+    <span><b>Scope</b> 16 topics · 9 stages</span>
+  </div>
+  <div class="badges">
+    <span class="badge ok">headline proof, e.g. smoke 171 PASS</span>
+    <span class="badge">pinned <span class="mono">abc1234</span></span>
+    <span class="badge warn">a caveat that must not be missed</span>
+    <span class="badge accent">an accent-tinted status</span>
+  </div>
+</header>
+
+<!-- COMPONENT: callout — variants ok | warn | danger. copyhost is optional. -->
+<div class="callout warn copyhost"><strong>Label</strong>One-paragraph message. Use danger for destructive facts, ok for expected-good results, warn for everything the reader must not miss.</div>
+
+<!-- COMPONENT: at-a-glance tiles — status spine via band-ok | band-warn | band-danger | band-accent (omit for neutral) -->
+<section>
+  <h2>At a glance</h2>
+  <div class="tiles">
+    <div class="tile band-ok">
+      <div class="t-label">Area · scope</div>
+      <div class="t-state">Delivered &amp; gated</div>
+      <div class="t-note">One or two lines of supporting detail; the spine color carries the status.</div>
+    </div>
+    <div class="tile band-warn">
+      <div class="t-label">Another area</div>
+      <div class="t-state">In flight</div>
+      <div class="t-note">Use warn for pending/blocked, danger for failures, accent for in-progress focus.</div>
+    </div>
+    <div class="tile">
+      <div class="t-label">Neutral area</div>
+      <div class="t-state">Built, inert</div>
+      <div class="t-note">No band class → neutral grey spine.</div>
+    </div>
+  </div>
+</section>
+
+<!-- COMPONENT: numbered section (runbook phase / guide step) -->
+<section id="section-a">
+  <h2><span class="phase-no">1</span> Numbered section title</h2>
+  <p class="when">One line on when/why this step applies.</p>
+  <p>Body text runs the full page width; bold the load-bearing words.</p>
+
+  <!-- COMPONENT: command block — .c = comment, .out = expected output; add class "danger" for destructive commands; copyhost gives it a copy button -->
+  <div class="copyhost"><pre><code>some command --with flags        <span class="c"># why this flag</span>
+<span class="out">expected output line</span></code></pre></div>
+
+  <!-- COMPONENT: table -->
+  <div class="tablewrap"><table>
+    <thead><tr><th>Column</th><th>Value</th><th>Why it is exactly this</th></tr></thead>
+    <tbody>
+      <tr><td>First cell is ink</td><td><span class="m">mono value</span></td><td>rationale</td></tr>
+    </tbody>
+  </table></div>
+
+  <!-- COMPONENT: collapsible detail -->
+  <details class="fold">
+    <summary>Longer material readers may skip</summary>
+    <div><ul><li><b>Point</b> — supporting detail.</li></ul></div>
+  </details>
+</section>
+
+<!-- COMPONENT: timeline — stages with what-you-do / what-the-system-does; class "blocked" dashes the marker -->
+<section id="section-b">
+  <h2>Timeline section</h2>
+  <p class="sub">One line introducing the spine.</p>
+  <ol class="timeline">
+    <li>
+      <span class="stage-no">1</span>
+      <div class="stage-card band-accent copyhost">
+        <h3>Stage title</h3>
+        <p class="op">What the actor does.</p>
+        <p class="sys">What the system does — the <b>real mechanism</b>, named.</p>
+        <p class="links">→ <a href="page-1.html">Related page</a></p>
+      </div>
+    </li>
+    <li class="blocked">
+      <span class="stage-no">2</span>
+      <div class="stage-card copyhost">
+        <h3>A blocked or pending stage</h3>
+        <p class="op">What is waited on.</p>
+        <p class="sys">Why it is blocked and what unblocks it.</p>
+      </div>
+    </li>
+  </ol>
+</section>
+
+<!-- COMPONENT: card grid — topic index or topology. Variants: .edge (accent), .data (dashed). -->
+<section>
+  <h2>Card grid section</h2>
+  <p class="group-eyebrow">Group label</p>
+  <div class="topic-grid">
+    <div class="node copyhost"><b><a href="page-1.html">Linked card title</a></b><span>One-line scope of the page or component.</span></div>
+    <div class="node edge"><b>edge-variant node</b><span>use for the entry point / accent element</span></div>
+    <div class="node data"><b>data-variant node</b><span>use for stores/volumes — dashed border</span></div>
+  </div>
+</section>
+
+<!-- COMPONENT: figure — inline SVG diagram (comparison, boundary map, Gantt). Use tokens' hexes; keep text ≥11px. -->
+<section>
+  <h2>Figure section</h2>
+  <figure>
+    <svg viewBox="0 0 900 130" role="img" aria-label="Example Gantt: phase one months 0 to 3, phase two months 3 to 9.">
+      <g font-family="system-ui,sans-serif">
+        <g stroke="#BEC6CE" opacity="0.5"><line x1="200" y1="26" x2="200" y2="104"/><line x1="433" y1="26" x2="433" y2="104"/><line x1="666" y1="26" x2="666" y2="104"/><line x1="899" y1="26" x2="899" y2="104"/></g>
+        <g font-size="11" fill="#7C858F" text-anchor="middle"><text x="200" y="16">Month 0</text><text x="433" y="16">M6</text><text x="666" y="16">M12</text><text x="888" y="16">M18</text></g>
+        <g font-size="12" fill="#171B22" text-anchor="end"><text x="186" y="48">Phase one</text><text x="186" y="86">Phase two</text></g>
+        <rect x="200" y="32" width="116" height="22" rx="5" fill="#0C8686"/>
+        <rect x="316" y="70" width="233" height="22" rx="5" fill="#0C8686" opacity="0.45"/>
+        <g font-size="11" font-weight="600" fill="#fff"><text x="210" y="47">3 mo</text><text x="326" y="85">6 mo</text></g>
+      </g>
+    </svg>
+    <figcaption>Caption: what the diagram proves. Hard-coded hexes are fine inside SVG — check both themes.</figcaption>
+  </figure>
+
+  <!-- COMPONENT: flow diagram — boxes + arrows + a dashed boundary; the simplest diagram shape -->
+  <figure>
+    <svg viewBox="0 0 900 190" role="img" aria-label="Flow: input goes to processor, processor to output; a dashed boundary separates the two sides.">
+      <g font-family="system-ui,sans-serif">
+        <rect x="10" y="55" width="190" height="66" rx="9" fill="#FDFDFE" stroke="#BEC6CE"/>
+        <text x="105" y="83" font-size="13.5" font-weight="600" fill="#171B22" text-anchor="middle">Input</text>
+        <text x="105" y="103" font-size="11.5" fill="#4C555F" text-anchor="middle">one line of context</text>
+        <rect x="355" y="55" width="190" height="66" rx="9" fill="#E2F0F0" stroke="#0C8686"/>
+        <text x="450" y="83" font-size="13.5" font-weight="600" fill="#075E5E" text-anchor="middle">Processor</text>
+        <text x="450" y="103" font-size="11.5" fill="#4C555F" text-anchor="middle">the accent-tinted step</text>
+        <rect x="700" y="55" width="190" height="66" rx="9" fill="#0C8686"/>
+        <text x="795" y="83" font-size="13.5" font-weight="600" fill="#FFFFFF" text-anchor="middle">Output</text>
+        <text x="795" y="103" font-size="11.5" fill="#C4E7E5" text-anchor="middle">solid accent = result</text>
+        <g stroke="#0C8686" stroke-width="1.5" fill="none">
+          <path d="M200 88 L347 88 M340 82 L348 88 L340 94"/>
+          <path d="M545 88 L692 88 M685 82 L693 88 L685 94"/>
+        </g>
+        <line x1="278" y1="18" x2="278" y2="162" stroke="#0C8686" stroke-width="1.5" stroke-dasharray="6 5"/>
+        <text x="270" y="180" font-size="11" font-weight="600" fill="#075E5E" text-anchor="end">OUTSIDE</text>
+        <text x="288" y="180" font-size="11" font-weight="600" fill="#075E5E">INSIDE THE BOUNDARY</text>
+      </g>
+    </svg>
+    <figcaption>The basic diagram vocabulary: neutral box → tinted box (accent) → solid box (result); dashed line = a boundary. Compose bigger diagrams from only these.</figcaption>
+  </figure>
+</section>
+
+<!-- COMPONENT: definition rows — key/value facts; swatch in the key carries status -->
+<section>
+  <h2>Definition rows section</h2>
+  <div class="rows">
+    <div class="row">
+      <div class="k"><span class="swatch s-ok"></span>Clear candidates</div>
+      <div class="v">The enumerated things this row covers. <em>An italic note on why they belong here.</em></div>
+    </div>
+    <div class="row">
+      <div class="k"><span class="swatch s-warn"></span>Middle tier</div>
+      <div class="v">Rows read as a rubric: predictable keys, honest values.</div>
+    </div>
+    <div class="row">
+      <div class="k"><span class="swatch s-danger"></span>Excluded</div>
+      <div class="v">Say what is out of scope and why.</div>
+    </div>
+  </div>
+
+  <!-- COMPONENT: simple numbered list — questions / decisions / prerequisites -->
+  <h3>Five questions before any component moves</h3>
+  <ol class="qs">
+    <li>First question, one line?</li>
+    <li>Second question?</li>
+    <li><span><b>A decision</b> — with a clause of supporting detail.</span></li>
+  </ol>
+</section>
+
+<!-- COMPONENT: trap — a gotcha that fails quietly -->
+<section>
+  <h2>Traps section</h2>
+  <div class="trap copyhost"><h4>Name the misconception outright</h4><p>"You would expect X. Actually Y, because Z." One trap per card.</p></div>
+</section>
+
+<!-- COMPONENT: thesis — the one-paragraph claim the page defends; place right under the header -->
+<div class="thesis copyhost">
+  <p><strong>The load-bearing sentence goes first, bolded.</strong> Then two or three sentences of supporting frame — what was decided, what the reader should take away, what the rest of the page proves.</p>
+</div>
+
+<!-- COMPONENT: stat ledger — 3-5 headline numbers; color the number only when it IS the status -->
+<dl class="stats">
+  <div class="stat"><dt>Shipping</dt><dd>0.1.70<small>context under the number</small></dd></div>
+  <div class="stat"><dt>Open items</dt><dd class="accent">42<small>across 35 endpoints</small></dd></div>
+  <div class="stat"><dt>Verified good</dt><dd class="ok">171<small>headline proof</small></dd></div>
+  <div class="stat"><dt>Blocked</dt><dd class="danger">4<small>waiting on a ruling</small></dd></div>
+</dl>
+
+<!-- COMPONENT: verdict cards — the questions asked, each with a short colored answer (yes/no/part) and its basis -->
+<section>
+  <h2>Verdicts section</h2>
+  <div class="verdicts">
+    <div class="verdict"><p class="q">Q1 · short form of the question</p><p class="a yes">Yes — everywhere</p><p class="d">One or two sentences of basis; the color answers before the words do.</p></div>
+    <div class="verdict"><p class="q">Q2 · another question</p><p class="a no">No</p><p class="d">Say what was checked and what was absent.</p></div>
+    <div class="verdict"><p class="q">Q3 · a mixed one</p><p class="a part">Five ideas, not the mechanism</p><p class="d">Partial verdicts get warn coloring, not a hedge paragraph.</p></div>
+  </div>
+</section>
+
+<!-- COMPONENT: correction block — earlier wrong claims, replaced up front; put it FIRST when it exists -->
+<section>
+  <h2>Corrections section</h2>
+  <div class="correction">
+    <b>Corrected before publication.</b> Why these are listed — a reader who followed the old claim meets the correction here.
+    <ol>
+      <li><b>"The wrong claim, quoted"</b> — what was actually true, and how the error happened.</li>
+      <li><b>"Another one"</b> — corrections carry the same evidence standard as the rest of the page.</li>
+    </ol>
+  </div>
+</section>
+
+<hr>
+
+<!-- COMPONENT: milestone timeline — dated dots for history; class "cut" marks a removal/regression -->
+<section>
+  <h2>Milestones section</h2>
+  <ul class="milestones">
+    <li><span class="d">2026-05-19</span>What happened on that date <span class="sha">repo abc1234</span></li>
+    <li class="cut"><span class="d">2026-06-22</span><b>The removal.</b> Red dot for the event that undid something <span class="sha">def5678</span></li>
+    <li><span class="d">2026-08-11</span>The most recent state <span class="sha">0a1b2c3</span></li>
+  </ul>
+</section>
+
+<!-- COMPONENT: compare columns — same list reconstructed side by side; .only + .flag mark per-item differences -->
+<section>
+  <h2>Compare-columns section</h2>
+  <div class="compare-cols">
+    <div class="ccol"><div class="hd">Variant A · source ref</div>
+      <ol>
+        <li>A shared item, identical in both</li>
+        <li class="only">An item only this side has <span class="flag">a-only</span></li>
+        <li>Another shared item <span class="flag warn">stale text</span></li>
+      </ol></div>
+    <div class="ccol"><div class="hd">Variant B · source ref</div>
+      <ol>
+        <li>A shared item, identical in both</li>
+        <li class="only">B's unique item <span class="flag">b-only</span></li>
+      </ol></div>
+  </div>
+</section>
+
+<!-- COMPONENT: decision cards — numbered rulings someone must make; .lean carries the recommendation -->
+<section>
+  <h2>Decisions section</h2>
+  <div class="decision"><div class="id">D1</div><div><h3>The decision, named</h3><p>What it decides and what depends on it.</p><p class="lean">The lean: which way the evidence points, stated as a recommendation, not a ruling.</p></div></div>
+  <div class="decision"><div class="id">D2</div><div><h3>Another ruling</h3><p>Keep each card to one decision; a card deciding two things is two cards.</p></div></div>
+</section>
+
+<!-- COMPONENT: option compare — pro/con lists; top bar: rec (accent) | warn | no (danger) -->
+<section>
+  <h2>Options section</h2>
+  <div class="opts">
+    <div class="opt rec">
+      <div class="tt">Recommended <span class="badge accent">split out</span></div>
+      <h3>The option's name</h3>
+      <p>One-paragraph description of what this option is.</p>
+      <ul>
+        <li class="pro"><strong>Named advantage.</strong> Why it matters.</li>
+        <li class="pro"><strong>Second advantage.</strong> Each pro/con is one claim.</li>
+        <li class="con"><strong>Honest cost.</strong> A recommendation without a stated cost reads as advocacy.</li>
+      </ul>
+    </div>
+    <div class="opt warn">
+      <div class="tt">Alternative <span class="badge warn">keep as-is</span></div>
+      <h3>The other option</h3>
+      <p>Give the alternative an honest case.</p>
+      <ul>
+        <li class="pro"><strong>Its real advantage.</strong></li>
+        <li class="con"><strong>Why it loses.</strong> The comparison should make the lean legible.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- COMPONENT: signal-chain lanes — hop sequences; spine + last hop tell the story -->
+<section>
+  <h2>Chain section</h2>
+  <div class="chain">
+    <div class="chain-lane works">
+      <div class="lt">Lane that works <span class="badge ok">complete</span></div>
+      <div class="hops">
+        <span class="hop good">first hop</span><span class="arr">→</span>
+        <span class="hop good">second hop</span><span class="arr">→</span>
+        <span class="hop good">delivered</span>
+      </div>
+    </div>
+    <div class="chain-lane broken">
+      <div class="lt">Lane that breaks <span class="badge danger">broken at the hook</span></div>
+      <div class="hops">
+        <span class="hop good">first hop</span><span class="arr">→</span>
+        <span class="hop dead">the dead hop — name what is missing</span>
+      </div>
+      <p class="note">Optional note: what was checked to prove the break.</p>
+    </div>
+  </div>
+</section>
+
+<!-- COMPONENT: register rows — work items with file:line citations and status chips; end with the chip legend -->
+<section>
+  <h2>Register section</h2>
+  <div class="register">
+    <div class="item copyhost">
+      <div>
+        <p class="row-title">The work item, titled as a claim</p>
+        <p class="row-body">What it is, what blocks it, what unblocks it — two sentences.</p>
+        <p class="cite"><b>path/to/file.ts</b>:407,419 · <b>other/file.tsx</b>:28</p>
+      </div>
+      <div class="tags"><span class="rchip blocked">Decision</span><span class="rchip size">L</span></div>
+    </div>
+    <div class="item copyhost">
+      <div>
+        <p class="row-title">A buildable item</p>
+        <p class="row-body">Chips: blocked / open / done / unver(ified) + a size chip.</p>
+        <p class="cite"><b>ui/src/pages/example.tsx</b>:237</p>
+      </div>
+      <div class="tags"><span class="rchip open">Open</span><span class="rchip size">S</span></div>
+    </div>
+  </div>
+  <div class="chip-legend">
+    <span><span class="rchip blocked">Decision</span> needs a ruling</span>
+    <span><span class="rchip open">Open</span> buildable now</span>
+    <span><span class="rchip done">Done</span> verified closed</span>
+    <span><span class="rchip unver">Unverified</span> asserted, not confirmed</span>
+  </div>
+</section>
+
+<!-- COMPONENT: arrow lists — next steps (→) and open questions (?) -->
+<section>
+  <h2>Next-steps section</h2>
+  <ul class="arrows">
+    <li><strong>First step</strong> — what it produces.</li>
+    <li><strong>Second step</strong> — arrow lists are for sequences the reader acts on.</li>
+  </ul>
+  <h3>Open questions</h3>
+  <ul class="arrows ask">
+    <li><strong>The question.</strong> Who owns the answer and what it unblocks.</li>
+  </ul>
+</section>
+
+<!-- COMPONENT: evidence index — dense file:line references inside a fold -->
+<section>
+  <h2>Evidence section</h2>
+  <details class="fold" open>
+    <summary>Load-bearing file:line references</summary>
+    <div><ul class="ev">
+      <li><b>Topic one</b> — <code>src/thing.ts:26-31,81</code>; <code>src/daemon.ts:5180-5186</code>.</li>
+      <li><b>Topic two</b> — <code>bin/script.sh:1646-1675</code>; shipped <code>abc1234</code> (2026-08-07).</li>
+    </ul></div>
+  </details>
+</section>
+
+<hr>
+<p class="foot">SLOT: closing provenance — generated date, pinned commits, source links.</p>
+</div>
+
+<script>
+  /* ══ KEEP: theme switch. SLOT: change the storage key once per site. ══ */
+  (function () {
+    var root = document.documentElement;
+    var KEY = "SITE-KEY-theme"; /* SLOT: unique per site, e.g. "myproject-docs-theme" */
+    var buttons = document.querySelectorAll(".theme-switch button");
+    function stored() {
+      try { return localStorage.getItem(KEY); } catch (e) { return null; }
+    }
+    function apply(mode) {
+      if (mode === "light" || mode === "dark") {
+        root.setAttribute("data-theme", mode);
+      } else {
+        root.removeAttribute("data-theme");
+        mode = "auto";
+      }
+      buttons.forEach(function (b) {
+        b.setAttribute("aria-pressed", String(b.getAttribute("data-set") === mode));
+      });
+    }
+    buttons.forEach(function (b) {
+      b.addEventListener("click", function () {
+        var mode = b.getAttribute("data-set");
+        try {
+          if (mode === "auto") localStorage.removeItem(KEY);
+          else localStorage.setItem(KEY, mode);
+        } catch (e) { /* private mode: theme still applies for this page view */ }
+        apply(mode);
+      });
+    });
+    apply(stored());
+  })();
+
+  /* ══ KEEP if the Pages dropdown is kept: close on outside click / Escape / link click ══ */
+  (function () {
+    var menu = document.getElementById("pagesMenu");
+    if (!menu) return;
+    document.addEventListener("click", function (e) {
+      if (menu.open && !menu.contains(e.target)) menu.open = false;
+    });
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") menu.open = false;
+    });
+    menu.querySelectorAll("a").forEach(function (a) {
+      a.addEventListener("click", function () { menu.open = false; });
+    });
+  })();
+
+  /* ══ KEEP: copy buttons — injected into every .copyhost ══ */
+  (function () {
+    var ICON_COPY = '<svg class="ic-copy" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+    var ICON_CHECK = '<svg class="ic-check" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5"/></svg>';
+    function copyText(text, done) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done, function () { fallback(text, done); });
+      } else {
+        fallback(text, done);
+      }
+    }
+    function fallback(text, done) {
+      var ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand("copy"); } catch (e) { /* nothing more to try */ }
+      document.body.removeChild(ta);
+      done();
+    }
+    document.querySelectorAll(".copyhost").forEach(function (host) {
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "copybtn";
+      btn.setAttribute("aria-label", "Copy this block's text");
+      btn.title = "Copy text";
+      btn.innerHTML = ICON_COPY + ICON_CHECK;
+      btn.addEventListener("click", function () {
+        var clone = host.cloneNode(true);
+        var b = clone.querySelector(".copybtn");
+        if (b) b.remove();
+        var text = clone.innerText.replace(/\n{3,}/g, "\n\n").trim();
+        copyText(text, function () {
+          btn.classList.add("copied");
+          setTimeout(function () { btn.classList.remove("copied"); }, 1400);
+        });
+      });
+      host.appendChild(btn);
+    });
+  })();
+</script>

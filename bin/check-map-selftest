@@ -1,0 +1,207 @@
+#!/usr/bin/env node
+// check-map-selftest — proves templates/check-map and the map template's own validator do what they claim.
+//
+//   bin/check-map-selftest
+//
+// 1. Builds fixture packages in a temp dir from templates/template-map.html (placeholders filled,
+//    index.html and one topics/<id>.html per node) and expects check-map to print nothing and exit 0 —
+//    also with DATA declared via const/let and with a ?query on the field-guide href; then broken
+//    variants (absolute href, missing page, unfilled template, symlinks that leave the package) that
+//    must each be reported.
+// 2. Runs negative cases against the VALIDATOR block extracted from the template: each must report the
+//    named failure, malformed input must never throw, and the good layouts must pass. Also checks that
+//    normalizeMapData keeps exactly the well-formed entries.
+// 3. Executes the real script prologue (DATA → validate → banner → theme → normalize) in a vm against a
+//    stubbed DOM for malformed DATA fixtures: it must never throw, must show the banner, must build D.
+// 4. node --check on the engine.
+// Exits 1 on any FAIL. The temp dir is removed even when a step throws.
+"use strict";
+const fs = require("fs"), path = require("path"), os = require("os"), vm = require("vm"), cp = require("child_process");
+const ROOT = path.resolve(__dirname, "..");
+const TPL = path.join(ROOT, "templates", "template-map.html");
+const CHECK = path.join(ROOT, "templates", "check-map");
+const html = fs.readFileSync(TPL, "utf8");
+let fails = 0;
+function report(ok, name, detail) {
+  console.log((ok ? "PASS  " : "FAIL  ") + name + (ok || !detail ? "" : "\n      " + detail));
+  if (!ok) fails++;
+}
+function block(name) {
+  const m = html.match(new RegExp("/\\* ═+ " + name + " START[^\\n]*\\*/([\\s\\S]*?)/\\* ═+ " + name + " END"));
+  if (!m) throw new Error("no " + name + " block in the template");
+  return m[1];
+}
+
+const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "check-map-selftest-"));
+try {
+  /* ── 1. fixture packages ── */
+  const ids = {}; vm.runInNewContext(block("DATA") + "\nglobalThis.ids = NODES.map(function (n) { return n.id; });", ids);
+  const filled = html
+    .replace("<title>PROJECT NAME — Knowledge Map</title>", "<title>Fixture — Knowledge Map</title>")
+    .replace('title: "PROJECT NAME — Knowledge Map",', 'title: "Fixture — Knowledge Map",')
+    .replace('themeKey: "SITE-KEY-theme"', 'themeKey: "fixture-theme"');
+  for (const left of ['<title>PROJECT NAME', 'title: "PROJECT NAME', 'themeKey: "SITE-KEY-theme"'])
+    if (filled.includes(left)) throw new Error("placeholder substitution failed: " + left);
+  const outside = path.join(tmp, "outside.html"); fs.writeFileSync(outside, '<meta charset="utf-8">');
+  let pkgNo = 0;
+  // build a package dir with index.html + every topic page, apply `mutate(dir)`, write the map, run check-map
+  function runCheck(name, content, expectText, mutate) {
+    const dir = path.join(tmp, "pkg" + (++pkgNo)); fs.mkdirSync(path.join(dir, "topics"), { recursive: true });
+    fs.writeFileSync(path.join(dir, "index.html"), '<meta charset="utf-8">');
+    for (const id of ids.ids) fs.writeFileSync(path.join(dir, "topics", id + ".html"), '<meta charset="utf-8">');
+    if (mutate) mutate(dir);
+    const f = path.join(dir, "knowledge-map.html"); fs.writeFileSync(f, content);
+    const r = cp.spawnSync(process.execPath, [CHECK, f], { encoding: "utf8" });
+    const out = (r.stdout + r.stderr).trim();
+    if (expectText === null) report(r.status === 0 && out === "", "check-map: " + name + " → clean, exit 0", "exit " + r.status + " output: " + out);
+    else report(r.status === 1 && out.includes(expectText), "check-map: " + name + " → reports " + JSON.stringify(expectText), "exit " + r.status + " output: " + out);
+  }
+  runCheck("filled package", filled, null);
+  runCheck("const/let DATA", filled
+    .replace("var SITE =", "const SITE =").replace("var GROUPS =", "const GROUPS =").replace("var NODES =", "let NODES =")
+    .replace("var EDGES =", "const EDGES =").replace("var ZONES =", "const ZONES =").replace("var JOURNEY =", "const JOURNEY ="), null);
+  runCheck("href with ?query#fragment", filled.replace('fieldGuideHref: "index.html"', 'fieldGuideHref: "index.html?view=guide#top"'), null);
+  runCheck("absolute href", filled.replace('fieldGuideHref: "index.html"', 'fieldGuideHref: "https://example.com/"'), "relative path");
+  runCheck("missing topic page", filled.replace('id:"why-a-pool"', 'id:"no-such-page"'), "topics/no-such-page.html does not exist");
+  runCheck("unfilled template", html, "[placeholder]");
+  runCheck("whole topics/ directory symlinked outside the package", filled, "resolves outside the package",
+    dir => { const ext = path.join(tmp, "ext-topics" + pkgNo); fs.renameSync(path.join(dir, "topics"), ext); fs.symlinkSync(ext, path.join(dir, "topics")); });
+  runCheck("topic page symlinked outside the package", filled, "resolves outside the package",
+    dir => { const p = path.join(dir, "topics", ids.ids[0] + ".html"); fs.unlinkSync(p); fs.symlinkSync(outside, p); });
+  runCheck("index.html symlinked outside the package", filled, "resolves outside the package",
+    dir => { const p = path.join(dir, "index.html"); fs.unlinkSync(p); fs.symlinkSync(outside, p); });
+  { // a package reached through a symlinked PATH must still be clean (macOS /var → /private/var class)
+    const dir = path.join(tmp, "pkg" + (++pkgNo)); fs.mkdirSync(path.join(dir, "topics"), { recursive: true });
+    fs.writeFileSync(path.join(dir, "index.html"), '<meta charset="utf-8">');
+    for (const id of ids.ids) fs.writeFileSync(path.join(dir, "topics", id + ".html"), '<meta charset="utf-8">');
+    fs.writeFileSync(path.join(dir, "knowledge-map.html"), filled);
+    const link = path.join(tmp, "via-link"); fs.symlinkSync(dir, link);
+    const r = cp.spawnSync(process.execPath, [CHECK, path.join(link, "knowledge-map.html")], { encoding: "utf8" });
+    const out = (r.stdout + r.stderr).trim();
+    report(r.status === 0 && out === "", "check-map: package reached through a symlinked path → clean", "exit " + r.status + " output: " + out);
+  }
+
+  /* ── 2. validator ── */
+  const V = {}; vm.runInNewContext(block("VALIDATOR"), V);
+  const site = { title: "T", journeyLabel: "J", journeyHint: "H", fieldGuideHref: "index.html", themeKey: "k" };
+  const node = (id, x, y) => ({ id, g: "a", x, y, title: "T " + id, teaser: "t", what: ["<b>L:</b> a", "<b>L:</b> b"] });
+  const good = () => ({ groups: { a: { name: "A", c: "var(--g-1)" } }, nodes: [node("p", 200, 200), node("q", 600, 200)],
+    edges: [["p", "q", "why"]], zones: [["a", 0, 0, 1000, 500]], journey: [{ n: 1, id: "p", t: "s", d: "d" }] });
+  function run(name, mut, expect, siteOverride) {
+    const d = good(); mut(d);
+    let p;
+    try { p = V.validateMapData(siteOverride === null ? undefined : Object.assign({}, site, siteOverride || {}), d.groups, d.nodes, d.edges, d.zones, d.journey); }
+    catch (e) { report(false, "validator: " + name, "THREW " + e.message); return; }
+    const ok = expect === null ? p.length === 0 : p.some(m => m.includes(expect));
+    report(ok, "validator: " + name, "got " + JSON.stringify(p));
+  }
+  run("good layout passes", d => {}, null);
+  run("empty journey", d => { d.journey = []; }, "JOURNEY is empty");
+  run("NaN coordinate", d => { d.nodes[0].x = NaN; }, "finite x,y");
+  run("Infinity coordinate", d => { d.nodes[1].y = Infinity; }, "finite x,y");
+  run("zone w = 0", d => { d.zones[0][3] = 0; }, "w,h > 0");
+  run("null zone entry", d => { d.zones.push(null); }, "must be [group, x, y, w, h]");
+  run("null node entry", d => { d.nodes.push(null); }, "is not a node object");
+  run("null edge entry", d => { d.edges.push(null); }, "must be [a, b, why, panelOnly?]");
+  run("null journey entry", d => { d.journey.push(null); }, "is not a stage object");
+  run("NODES not an array", d => { d.nodes = {}; d.edges = []; d.journey = []; }, "NODES must be an array");
+  run("GROUPS null", d => { d.groups = null; }, "GROUPS is missing");
+  run("GROUPS is an array", d => { d.groups = [{ name: "A", c: "x" }]; }, "GROUPS is missing or not an object");
+  run("null group entry", d => { d.groups.a = null; }, "GROUPS.a must be an object with name and c");
+  run("array group entry", d => { d.groups.a = ["A"]; }, "GROUPS.a must be an object with name and c");
+  run("primitive group entry", d => { d.groups.a = "A"; }, "GROUPS.a must be an object with name and c");
+  run("id 'constructor' is not a false duplicate", d => { d.nodes[0].id = "constructor"; d.edges[0][0] = "constructor"; d.journey[0].id = "constructor"; }, null);
+  run("group 'toString' is unknown, not inherited", d => { d.nodes[0].g = "toString"; }, "unknown group 'toString'");
+  run("zone group 'valueOf' is unknown, not inherited", d => { d.zones.push(["valueOf", 0, 600, 100, 100]); }, "unknown group 'valueOf'");
+  run("group name over 24 chars", d => { d.groups.a.name = "x".repeat(25); }, "at most 24 characters");
+  run("group name with markup", d => { d.groups.a.name = "<b>A</b>"; }, "plain text");
+  run("journey badge needs zone headroom", d => { d.nodes[1].x = 912; d.journey.push({ n: 2, id: "q", t: "s", d: "d" }); }, "(incl. the journey badge)");
+  run("same node at the edge without a stage passes", d => { d.nodes[1].x = 912; }, null);
+  run("SITE undefined", d => {}, "SITE is missing", null);
+  run("non-string fact", d => { d.nodes[0].what = [null, {}]; }, ".what[0] is not a non-empty string");
+  run("fact without bold lead-in", d => { d.nodes[0].what = ["plain fact", "<b>ok:</b> x"]; }, "bolded lead-in");
+  run("title with markup", d => { d.nodes[0].title = "<b>x</b>"; }, "plain-text title");
+  run("title over 44 chars", d => { d.nodes[0].title = "x".repeat(45); }, "clamps to two lines");
+  run("traversal id", d => { d.nodes[1].id = "../index"; d.edges = []; }, "must be a slug");
+  run("uppercase id", d => { d.nodes[1].id = "Q"; d.edges = []; }, "must be a slug");
+  run("absolute field-guide href", d => {}, "relative path", { fieldGuideHref: "/abs.html" });
+  run("scheme field-guide href", d => {}, "relative path", { fieldGuideHref: "https://example.com/" });
+  run("obstructed straight edge", d => { d.nodes.push(node("mid", 400, 200)); }, "every orthogonal route crosses another node (mid)");
+  run("obstructed but panel-only edge passes", d => { d.nodes.push(node("mid", 400, 200)); d.edges[0][3] = 1; }, null);
+  run("dogleg available passes", d => { d.nodes.push(node("mid", 400, 200)); d.nodes[1].y = 400; }, null);
+  run("touching boxes (badge pointing away) are not an overlap", d => { d.nodes[1].x = 200 + 176; d.journey[0].id = "q"; }, null);
+  run("staged badge poking a touching neighbour is an overlap", d => { d.nodes[1].x = 200 + 176; }, "overlap (incl. the journey badge)");
+  run("route through a staged badge is a hit", d => { d.nodes.push(node("g", 400, 262)); d.journey.push({ n: 2, id: "g", t: "s", d: "d" }); }, "every orthogonal route crosses another node (g)");
+  run("same route past an unstaged card passes", d => { d.nodes.push(node("g", 400, 262)); }, null);
+  run("route touching a padded box is a hit", d => { d.nodes.push(node("g", 400, 250)); }, "every orthogonal route crosses another node (g)");
+  run("route clear just past the pad passes", d => { d.nodes.push(node("g", 400, 251)); }, null);
+  run("nodes overlap", d => { d.nodes[1].x = 300; }, "overlap");
+  run("node leaves zone", d => { d.nodes[0].x = 50; }, "leaves zone");
+  run("zones overlap", d => { d.groups.a2 = { name: "B", c: "var(--g-2)" }; d.zones.push(["a2", 500, 0, 300, 300]); }, "overlap");
+  try {
+    const p = V.validateMapData(undefined, undefined, undefined, undefined, undefined, undefined);
+    report(p.length >= 6 && p.some(m => m.includes("NODES must be an array")), "validator: everything undefined reports, does not throw", JSON.stringify(p));
+  } catch (e) { report(false, "validator: everything undefined reports, does not throw", "THREW " + e.message); }
+  const N = V.normalizeMapData(good().groups,
+    [node("p", 200, 200), null, { id: "bad" }, node("p", 1, 1), node("nan", NaN, 1), node("r", 300, 300)],
+    [["p", "p", "self"], ["p", "zz", "unknown"], null, ["p", "r", "kept"]],
+    [null, ["a", 0, 0, 10, 10], ["a", 0, 0, 0, 5]], [{ n: 1, id: "p" }, { n: 2, id: "zz" }, null, { n: 3, id: "r" }]);
+  report(N.nodes.map(n => n.id).join() === "p,r" && N.nodes[0].x === 200 && N.edges.length === 1 && N.edges[0][2] === "kept"
+    && N.zones.length === 1 && N.zones[0][3] === 10 && N.journey.map(s => s.id).join() === "p,r" && N.groups.a,
+    "normalize keeps exactly the well-formed entries", JSON.stringify(N));
+  const N3 = V.normalizeMapData({ a: null, b: ["B"], c: "C", d: { name: "D", c: "x" } }, [node("p", 200, 200), Object.assign(node("q", 600, 200), { g: "d" })], [["p", "q", "why"]], [["a", 0, 0, 10, 10], ["d", 0, 0, 1000, 500]], [{ n: 1, id: "p" }, { n: 2, id: "q" }]);
+  report(Object.keys(N3.groups).join() === "d" && N3.nodes.map(n => n.id).join() === "q" && N3.edges.length === 0 && N3.zones.length === 1 && N3.zones[0][0] === "d" && N3.journey.map(s => s.id).join() === "q",
+    "normalize keeps only valid groups and what references them", JSON.stringify(N3));
+  const N4 = V.normalizeMapData({}, {}, 5, "x", { length: 2 });
+  report(N4.nodes.length === 0 && N4.edges.length === 0 && N4.zones.length === 0 && N4.journey.length === 0, "normalize tolerates non-array collections", JSON.stringify(N4));
+  const N5 = V.normalizeMapData({ a: { name: "A", c: "x" } }, [node("constructor", 200, 200), Object.assign(node("q", 600, 200), { g: "toString" })], [["constructor", "q", "why"]], [["a", 0, 0, 1000, 500], ["hasOwnProperty", 0, 600, 10, 10]], [{ n: 1, id: "constructor" }, { n: 2, id: "q" }]);
+  report(N5.nodes.map(n => n.id).join() === "constructor" && N5.edges.length === 0 && N5.zones.length === 1 && N5.journey.map(s => s.id).join() === "constructor",
+    "normalize keeps id 'constructor', drops inherited-key groups", JSON.stringify(N5));
+  const N2 = V.normalizeMapData(undefined, undefined, undefined, undefined, undefined);
+  report(N2.nodes.length === 0 && N2.edges.length === 0 && N2.zones.length === 0 && N2.journey.length === 0 && typeof N2.groups === "object",
+    "normalize tolerates undefined collections", JSON.stringify(N2));
+
+  /* ── 3. initialization with malformed DATA against a stubbed DOM — the prologue (validate → banner → theme → normalize) must never throw ── */
+  const script = html.match(/<script>\n([\s\S]*)<\/script>/)[1];
+  const dataStart = script.indexOf("/* ══════════ DATA START"), dataEnd = script.indexOf("/* ══════════ DATA END"), stateAt = script.indexOf("/* ══ state ══ */");
+  if (dataStart < 0 || dataEnd < 0 || stateAt < 0) throw new Error("script markers not found");
+  const dataBlock = script.slice(dataStart, dataEnd), prologue = script.slice(dataEnd, stateAt);
+  const el = () => ({ hidden: true, innerHTML: "", textContent: "", title: "", href: "", lastChild: { textContent: "" },
+    addEventListener() {}, setAttribute() {}, removeAttribute() {}, getAttribute() { return null; } });
+  function runInit(name, data, expectBanner) {
+    const banner = el();
+    const doc = { title: "", documentElement: el(), querySelector: () => el(), querySelectorAll: () => [], getElementById: id => id === "datawarn" ? banner : el() };
+    const ctx = { document: doc, console: { warn() {}, error() {} }, localStorage: { getItem() { return null; }, setItem() {}, removeItem() {} } };
+    try { vm.runInNewContext(data + "\n" + prologue + "\nglobalThis.__D = D;", ctx); }
+    catch (e) { report(false, "init: " + name, "THREW " + e.message); return; }
+    const ok = banner.hidden === !expectBanner && ctx.__D && Array.isArray(ctx.__D.nodes) && typeof ctx.__D.groups === "object";
+    report(ok, "init: " + name + (expectBanner ? " → banner shown, D built" : " → no banner, D built"), "banner.hidden=" + banner.hidden + " D=" + (ctx.__D ? "ok" : "missing"));
+  }
+  const filledData = dataBlock.replace('title: "PROJECT NAME — Knowledge Map",', 'title: "Fixture",').replace('themeKey: "SITE-KEY-theme"', 'themeKey: "fixture-theme"');
+  if (filledData === dataBlock) throw new Error("DATA placeholder substitution failed");
+  runInit("filled DATA", filledData, false);
+  runInit("NODES is an object", filledData.replace("var NODES = [", "var NODES = {}; var NODES_ = ["), true);
+  runInit("EDGES is a number", filledData.replace("var EDGES = [", "var EDGES = 5; var EDGES_ = ["), true);
+  runInit("ZONES is a string", filledData.replace("var ZONES = [", 'var ZONES = "x"; var ZONES_ = ['), true);
+  runInit("JOURNEY is null", filledData.replace("var JOURNEY = [", "var JOURNEY = null; var JOURNEY_ = ["), true);
+  runInit("null group entry", filledData.replace("var GROUPS = {", "var GROUPS = {\n  bogus: null,"), true);
+  runInit("SITE is a string", filledData.replace("var SITE = {", 'var SITE = "nope"; var SITE_ = {'), true);
+  runInit("every declaration deleted", "", true);
+
+  /* ── 4. CSS pins — the geometry constants the validator reasons with must stay true in the stylesheet ── */
+  const nodeCss = html.match(/\n  \.node \{([\s\S]*?)\n  \}/);
+  const decl = nodeCss ? nodeCss[1] : "";
+  report(!!nodeCss && /(^|[;{\s])height: 84px;/.test(decl) && /(^|[;{\s])width: 176px;/.test(decl) && !/min-height|max-height|max-width/.test(decl),
+    "css: .node is exactly 176 × 84 (no min/max variants)", decl.trim() || "rule not found");
+  report(/\.node \.ng \{[^}]*white-space: nowrap/.test(html), "css: .ng group label cannot wrap");
+  report(/\.node \.nt \{[^}]*line-clamp: 2/.test(html), "css: .nt title clamps to two lines");
+
+  /* ── 5. engine syntax ── */
+  const sf = path.join(tmp, "engine.js"); fs.writeFileSync(sf, script);
+  const r = cp.spawnSync(process.execPath, ["--check", sf], { encoding: "utf8" });
+  report(r.status === 0, "engine: node --check", r.stderr.trim());
+} finally {
+  fs.rmSync(tmp, { recursive: true, force: true });
+}
+console.log(fails ? fails + " FAILED" : "all passed");
+process.exit(fails ? 1 : 0);

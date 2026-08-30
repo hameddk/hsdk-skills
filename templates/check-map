@@ -1,0 +1,65 @@
+#!/usr/bin/env node
+// check-map — validate a built knowledge map (the template-map.html contract) from the shell.
+//
+//   templates/check-map path/to/knowledge-map.html
+//
+// Runs the map's OWN validator — extracted from the file by its VALIDATOR START/END markers, so
+// there is one implementation — over the DATA block (evaluated in a vm; var, let and const all
+// work), then checks what a browser cannot: that every node's topics/<id>.html exists next to the
+// map and that SITE.fieldGuideHref resolves. Prints one line per problem and exits 1 if there are
+// any; a clean map prints nothing.
+"use strict";
+const fs = require("fs"), path = require("path"), vm = require("vm");
+
+const file = process.argv[2];
+if (!file) { console.error("usage: check-map <knowledge-map.html>"); process.exit(2); }
+const html = fs.readFileSync(file, "utf8");
+
+function block(name) {
+  const re = new RegExp("/\\* ═+ " + name + " START[^\\n]*\\*/([\\s\\S]*?)/\\* ═+ " + name + " END");
+  const m = html.match(re);
+  if (!m) { console.error(`check-map: no ${name} START/END markers in ${file}`); process.exit(2); }
+  return m[1];
+}
+
+const ctx = {};
+try {
+  vm.runInNewContext(
+    block("DATA") + "\n" + block("VALIDATOR") +
+    "\nglobalThis.__map = { SITE: SITE, GROUPS: GROUPS, NODES: NODES, EDGES: EDGES, ZONES: ZONES, JOURNEY: JOURNEY," +
+    " problems: validateMapData(SITE, GROUPS, NODES, EDGES, ZONES, JOURNEY) };",
+    ctx, { timeout: 2000 });
+} catch (e) {
+  console.error("check-map: DATA does not evaluate: " + e.message); process.exit(2);
+}
+
+const map = ctx.__map;
+const problems = map.problems.slice();
+const dir = path.dirname(path.resolve(file));
+// is `file` (which exists) really inside `root` once symlinks are resolved?
+function inside(file, root) {
+  const rel = path.relative(fs.realpathSync(root), fs.realpathSync(file));
+  return rel !== "" && !rel.startsWith("..") && !path.isAbsolute(rel);
+}
+const topics = path.resolve(dir, "topics");
+for (const n of (Array.isArray(map.NODES) ? map.NODES : [])) {
+  if (!n || typeof n.id !== "string") continue;
+  const page = path.resolve(topics, n.id + ".html");
+  if (!page.startsWith(topics + path.sep)) problems.push(`NODES ${n.id}: id escapes topics/`);
+  else if (!fs.existsSync(page)) problems.push(`NODES ${n.id}: topics/${n.id}.html does not exist next to the map`);
+  else if (!inside(page, dir)) problems.push(`NODES ${n.id}: topics/${n.id}.html resolves outside the package (a symlink?)`);
+}
+const fg = map.SITE && map.SITE.fieldGuideHref;
+if (typeof fg === "string" && !/^([a-z][a-z0-9+.-]*:|\/\/|\/)/i.test(fg)) { // absolute forms are already reported by the validator
+  const target = path.resolve(dir, fg.split(/[?#]/)[0]);
+  if (!target.startsWith(dir + path.sep)) problems.push(`SITE.fieldGuideHref '${fg}' escapes the package`);
+  else if (!fs.existsSync(target)) problems.push(`SITE.fieldGuideHref '${fg}' does not resolve next to the map`);
+  else if (!inside(target, dir)) problems.push(`SITE.fieldGuideHref '${fg}' resolves outside the package (a symlink?)`);
+}
+if (/<title>PROJECT NAME/.test(html))
+  problems.push("[placeholder] <title> still says PROJECT NAME — the one edit outside DATA");
+if (!html.startsWith('<meta charset="utf-8">')) problems.push('<meta charset="utf-8"> is not line 1');
+if (/<(script|link|img)[^>]+(src|href)="https?:/.test(html)) problems.push("external resource referenced — the map must be self-contained");
+
+for (const p of problems) console.log(p);
+process.exit(problems.length ? 1 : 0);

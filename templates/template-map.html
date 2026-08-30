@@ -1,0 +1,1024 @@
+<meta charset="utf-8">
+<title>PROJECT NAME — Knowledge Map</title>
+<!--
+  template-map.html — the hsdk knowledge-map template (companion to the explainer field guide).
+  A pannable, zoomable graph of a site's topic pages: hover peeks, a reader panel per node, a
+  guided "journey" through the pages in narrative order, a legend that dims groups, and the same
+  three-state theme as the other templates. One self-contained file, no external resources.
+
+  STRUCTURE — two halves, one contract:
+    1. DATA   — everything between the "DATA START" and "DATA END" markers in the <script>:
+       SITE (the per-site strings), GROUPS, NODES, JOURNEY, EDGES, ZONES. Replace ALL of it per
+       project. The shipped values are a complete worked example (a credential-pool subsystem) —
+       study them, then replace them. The ONE edit outside DATA is the <title> tag (it is what
+       shows before scripts run); the bar title, the journey strip, the switcher and the theme
+       key are written from SITE at load, so their placeholders below are overwritten.
+    2. ENGINE — everything after "DATA END". DO NOT EDIT it. It validates DATA at load (problems
+       go to the console AND a red banner on the map), sizes the world from ZONES, routes edges
+       orthogonally with bridge hops, and implements the interaction contract the explainer skill
+       documents. `templates/check-map <file>` runs the same validator from the command line and
+       also checks that every node's topics/<id>.html exists.
+
+  DATA RULES the validator enforces:
+  - node.id matches the topic page filename: topics/<id>.html
+  - node.what is an ARRAY of 2–3 fact strings (may contain <b>), never a prose paragraph
+  - every node box (NODE_W × NODE_H = 176 × 84, centred on x,y) sits FULLY INSIDE its group's
+    zone; zones do not overlap; nodes do not overlap; a node carrying a journey stage needs 12px
+    extra clearance on its top and right — to the zone edge, to neighbouring cards, and to
+    passing edges (the stage badge and its ground ring stick out)
+  - every edge carries a one-line "why these connect"; 4th element 1 = panel-only (listed in the
+    reader panel, not drawn) — use it for any relation that would cross most of the map
+  - JOURNEY ids exist in NODES; stages are numbered 1..n in narrative order; at least one stage
+  - every drawn edge has at least one orthogonal route (straight, one bend, or two bends through
+    the midpoint) that crosses no other node — move nodes, or mark the edge panel-only
+  - node.what entries each open with a bolded lead-in: "<b>Lead:</b> rest of the fact"; titles
+    and teasers are plain text, titles at most 44 characters (two lines on the card); group
+    names are plain text, at most 24 characters (one-line labels)
+  - SITE.themeKey is the ONE key every page of the site shares; SITE.title replaces PROJECT NAME
+-->
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --ground: #E9ECF0; --surface: #FDFDFE; --surface-2: #F2F4F7;
+    --ink: #171B22; --ink-soft: #4C555F; --ink-faint: #7C858F;
+    --line: #D3D9DF; --line-strong: #BEC6CE;
+    --accent: #0C8686; --accent-ink: #075E5E; --accent-soft: rgba(12,134,134,.11);
+    --danger: #B3382E;
+    --shadow: 0 1px 2px rgba(20,28,38,.05), 0 8px 26px rgba(20,28,38,.10);
+    --mono: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --g-1: #0C8686; --g-2: #4F56C9; --g-3: #B45F26;
+    --g-4: #2E8B57; --g-5: #9C4F96; --g-6: #5C636E;
+    --journey: #C9A227;
+    --dot-grid: rgba(23,27,34,.10);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0E1218; --surface: #161B22; --surface-2: #1C222B;
+      --ink: #DEE4EB; --ink-soft: #9BA6B2; --ink-faint: #6D7783;
+      --line: #262E38; --line-strong: #333D49;
+      --accent: #2FB8B0; --accent-ink: #6ED4CD; --accent-soft: rgba(47,184,176,.14);
+      --danger: #E06C5F;
+      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.45);
+      --g-1: #35C0B7; --g-2: #8B91EE; --g-3: #E0925C;
+      --g-4: #57C08A; --g-5: #C97FC2; --g-6: #98A2AE;
+      --journey: #E0BE55;
+      --dot-grid: rgba(222,228,235,.07);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #0E1218; --surface: #161B22; --surface-2: #1C222B;
+    --ink: #DEE4EB; --ink-soft: #9BA6B2; --ink-faint: #6D7783;
+    --line: #262E38; --line-strong: #333D49;
+    --accent: #2FB8B0; --accent-ink: #6ED4CD; --accent-soft: rgba(47,184,176,.14);
+    --danger: #E06C5F;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.45);
+    --g-1: #35C0B7; --g-2: #8B91EE; --g-3: #E0925C;
+    --g-4: #57C08A; --g-5: #C97FC2; --g-6: #98A2AE;
+    --journey: #E0BE55;
+    --dot-grid: rgba(222,228,235,.07);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; overflow: hidden;
+    background: var(--ground); color: var(--ink);
+    font: 14px/1.55 var(--sans); -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--accent-ink); }
+
+  /* ── top bar ── */
+  .bar {
+    position: fixed; inset: 0 0 auto 0; z-index: 40; min-height: 52px;
+    display: flex; align-items: center; flex-wrap: wrap; gap: 6px 14px; padding: 8px 16px;
+    background: color-mix(in srgb, var(--surface) 92%, transparent);
+    backdrop-filter: blur(8px); border-bottom: 1px solid var(--line);
+  }
+  @media (max-width: 1400px) { .bar .hint { display: none; } }
+  .bar .title { font-weight: 700; font-size: 14.5px; letter-spacing: -.01em; display: flex; align-items: center; gap: 9px; white-space: nowrap; }
+  .bar .title svg { color: var(--accent); flex: none; }
+  .switch { display: inline-flex; flex: none; border: 1px solid var(--line-strong); border-radius: 9px; overflow: hidden; background: var(--surface); }
+  .switch a { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; font: 650 12px/1 var(--sans); color: var(--ink-soft); text-decoration: none; }
+  .switch a + a { border-left: 1px solid var(--line); }
+  .switch a svg { flex: none; }
+  .switch a:hover { color: var(--ink); background: var(--surface-2); }
+  .switch a.cur { background: var(--accent-soft); color: var(--accent-ink); }
+  .bar .hint { color: var(--ink-faint); font-size: 12px; white-space: nowrap; }
+  .bar-spacer { flex: 1; }
+  .legend {
+    position: fixed; z-index: 40; left: 12px; top: calc(var(--bar-h, 52px) + 12px);
+    display: flex; flex-direction: column; align-items: flex-start; gap: 3px;
+  }
+  .lg {
+    display: inline-flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; appearance: none;
+    background: color-mix(in srgb, var(--surface) 88%, transparent); backdrop-filter: blur(4px);
+    border: 1px solid var(--line);
+    font: 600 11px/1 var(--sans); color: var(--ink-soft);
+    padding: 5px 9px; border-radius: 6px;
+  }
+  .lg::before { content: ""; width: 8px; height: 8px; border-radius: 3px; background: var(--c); }
+  .lg:hover { background: var(--surface-2); }
+  .lg.off { opacity: .35; }
+  .jbtn {
+    display: inline-flex; align-items: center; gap: 7px; cursor: pointer; flex: none;
+    font: 650 12px/1 var(--sans); color: var(--ink);
+    border: 1px solid var(--line-strong); background: var(--surface); border-radius: 8px;
+    padding: 7px 12px;
+  }
+  .jbtn::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--journey); }
+  .jbtn:hover { border-color: var(--journey); }
+  .jbtn.on { background: color-mix(in srgb, var(--journey) 16%, var(--surface)); border-color: var(--journey); }
+  .theme-switch { display: inline-flex; flex: none; border: 1px solid var(--line); border-radius: 999px; background: var(--surface-2); overflow: hidden; }
+  .theme-switch button { appearance: none; border: none; background: transparent; color: var(--ink-faint); width: 28px; height: 24px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
+  .theme-switch button[aria-pressed="true"] { background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent-ink); }
+
+  /* ── map viewport ── */
+  #viewport { position: absolute; inset: 0; cursor: grab; touch-action: none;
+    background-image: radial-gradient(var(--dot-grid) 1.2px, transparent 1.2px); background-size: 26px 26px; }
+  #viewport.panning { cursor: grabbing; }
+  #world { position: absolute; left: 0; top: 0; transform-origin: 0 0; } /* size is set by the engine from ZONES */
+  #edges { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+  #edges path.e { fill: none; stroke: var(--line-strong); stroke-width: 1.6; transition: stroke .18s, opacity .18s, stroke-width .18s; }
+  #edges path.hit { fill: none; stroke: transparent; stroke-width: 16; cursor: pointer; }
+  #edges path.e.hl { stroke: var(--hlc, var(--accent)); stroke-width: 2.6; }
+  #edges path.e.dim { opacity: .16; }
+  #edges path.j { fill: none; stroke: var(--journey); stroke-width: 3; stroke-dasharray: 7 7; opacity: 0; transition: opacity .25s; pointer-events: none; }
+  #edges path.j.on { opacity: .95; animation: march 1.2s linear infinite; }
+  @keyframes march { to { stroke-dashoffset: -14; } }
+  @media (prefers-reduced-motion: reduce) { #edges path.j.on { animation: none; } }
+
+  .gzone { position: absolute; border-radius: 22px; pointer-events: none;
+    background: color-mix(in srgb, var(--c) 5%, transparent);
+    border: 1.5px dashed color-mix(in srgb, var(--c) 30%, transparent); }
+  .gzone .gl { position: absolute; top: -10px; left: 16px; white-space: nowrap; font: 700 10.5px/1 var(--mono); letter-spacing: .14em; text-transform: uppercase;
+    color: var(--c); background: var(--ground); padding: 3px 8px; border-radius: 5px; }
+
+  .node {
+    position: absolute; width: 176px; height: 84px; display: flex; flex-direction: column; transform: translate(-50%, -50%);
+    background: var(--surface); border: 1.5px solid color-mix(in srgb, var(--c) 55%, var(--line));
+    border-radius: 11px; padding: 9px 12px 10px; box-shadow: var(--shadow);
+    cursor: pointer; user-select: none; transition: opacity .18s, box-shadow .18s, border-color .18s;
+  }
+  .node:hover { border-color: var(--c); box-shadow: 0 2px 4px rgba(0,0,0,.08), 0 12px 34px rgba(0,0,0,.16); z-index: 5; }
+  .node.sel { border-color: var(--c); outline: 2px solid var(--c); outline-offset: 1px; z-index: 6; }
+  .node.dim { opacity: .30; }
+  .node .nt { font: 650 12.5px/1.3 var(--sans); letter-spacing: -.005em; margin: 0; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+  .node .ng { font: 600 9.5px/1 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--c); margin-top: auto; padding-top: 5px; display: block; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .node .stg {
+    position: absolute; top: -9px; right: -9px; min-width: 20px; height: 20px; padding: 0 5px;
+    border-radius: 7px; background: var(--journey); color: #201a05;
+    font: 700 11px/20px var(--mono); text-align: center; box-shadow: 0 0 0 2.5px var(--ground);
+  }
+  .node.visited::after { content: ""; position: absolute; left: 10px; bottom: 6px; width: 5px; height: 5px; border-radius: 50%; background: var(--c); opacity: .8; }
+
+  /* ── hover preview card ── */
+  #peek {
+    position: fixed; z-index: 60; width: 300px; pointer-events: none;
+    background: var(--surface); border: 1px solid var(--line-strong); border-radius: 11px;
+    box-shadow: var(--shadow); padding: 12px 14px; opacity: 0; transition: opacity .12s;
+  }
+  #peek.show { opacity: 1; }
+  #peek .pt { font: 650 13px/1.3 var(--sans); margin: 0 0 3px; }
+  #peek .pg { font: 600 9.5px/1 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--pc, var(--accent)); }
+  #peek .pd { margin: 7px 0 0; font-size: 12px; color: var(--ink-soft); }
+  #peek .pf { margin: 8px 0 0; font: 500 10.5px/1 var(--mono); color: var(--ink-faint); }
+
+  /* ── reader panel ── */
+  #panel {
+    position: fixed; z-index: 50; top: calc(var(--bar-h, 52px) + 10px); right: 12px; bottom: 12px; width: min(400px, calc(100vw - 24px));
+    background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow);
+    display: flex; flex-direction: column; overflow: hidden;
+    transform: translateX(calc(100% + 20px)); transition: transform .22s ease;
+  }
+  #panel.open { transform: none; }
+  @media (prefers-reduced-motion: reduce) { #panel { transition: none; } }
+  #panel .ph { padding: 16px 18px 12px; border-bottom: 1px solid var(--line); position: relative; }
+  #panel .ph .pg { font: 600 10px/1 var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--pc, var(--accent)); }
+  #panel .ph h2 { margin: 6px 0 0; font: 700 19px/1.2 var(--sans); letter-spacing: -.015em; padding-right: 30px; }
+  #panel .ph .stgline { margin: 8px 0 0; font: 600 11px/1.4 var(--mono); color: var(--journey); }
+  #panel .close { position: absolute; top: 12px; right: 12px; width: 26px; height: 26px; border-radius: 7px; border: 1px solid var(--line);
+    background: var(--surface-2); color: var(--ink-faint); cursor: pointer; font: 400 14px/1 var(--sans); }
+  #panel .close:hover { color: var(--ink); }
+  #panel .pb { padding: 14px 18px 18px; overflow-y: auto; flex: 1; }
+  #panel .what { font-size: 13.5px; color: var(--ink-soft); margin: 0 0 14px; }
+  #panel .what b { color: var(--ink); }
+  #panel .openlink {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    background: color-mix(in srgb, var(--pc, var(--accent)) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--pc, var(--accent)) 45%, transparent);
+    color: var(--ink); text-decoration: none; font: 650 13px/1 var(--sans);
+    padding: 11px 14px; border-radius: 9px; margin: 0 0 16px;
+  }
+  #panel .openlink:hover { background: color-mix(in srgb, var(--pc, var(--accent)) 20%, transparent); }
+  #panel .clabel { font: 650 10px/1 var(--mono); letter-spacing: .13em; text-transform: uppercase; color: var(--ink-faint); margin: 0 0 8px; }
+  .conn { display: flex; flex-direction: column; gap: 6px; }
+  .conn button {
+    display: block; width: 100%; text-align: left; cursor: pointer;
+    background: var(--surface-2); border: 1px solid var(--line); border-radius: 9px; padding: 9px 12px;
+    color: var(--ink); font: 500 12.5px/1.4 var(--sans);
+  }
+  .conn button:hover { border-color: var(--cc, var(--accent)); }
+  .conn .cn { font-weight: 650; display: flex; align-items: center; gap: 7px; }
+  .conn .cn::before { content: ""; width: 7px; height: 7px; border-radius: 3px; background: var(--cc, var(--accent)); flex: none; }
+  .conn .cw { display: block; color: var(--ink-faint); font-size: 11.5px; margin-top: 2px; }
+
+  /* ── journey block (inside the reader panel) ── */
+  #jpanel { padding: 12px 18px 14px; border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--journey) 8%, transparent); }
+  #jpanel .jlab { display: flex; align-items: center; gap: 7px; font: 650 10px/1 var(--mono); letter-spacing: .13em; text-transform: uppercase; color: var(--ink-faint); margin: 0 0 9px; }
+  #jpanel .jlab::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--journey); }
+  #jpanel .jrow { display: flex; gap: 8px; align-items: center; }
+  #jpanel .jrow > button { flex: none; width: 32px; height: 26px; border: 1px solid var(--line); background: var(--surface); border-radius: 7px; cursor: pointer; color: var(--ink); font: 650 14px/1 var(--sans); }
+  #jpanel .jrow > button:hover:not(:disabled) { border-color: var(--journey); }
+  #jpanel .jrow > button:disabled { opacity: .35; cursor: default; }
+  .jsegs { flex: 1; display: grid; gap: 4px; } /* columns are set by the engine from JOURNEY.length */
+  .jsegs button { height: 24px; border-radius: 6px; border: 1px solid var(--line); background: var(--surface); font: 650 11px/1 var(--mono); color: var(--ink-faint); cursor: pointer; padding: 0; }
+  .jsegs button:hover { border-color: var(--journey); color: var(--ink); }
+  .jsegs button.done { background: color-mix(in srgb, var(--journey) 26%, var(--surface)); border-color: transparent; color: var(--ink-soft); }
+  .jsegs button.cur { background: var(--journey); border-color: var(--journey); color: #201a05; }
+  #jpanel .jdesc { margin: 10px 0 0; font-size: 12.5px; line-height: 1.5; color: var(--ink-soft); }
+  #jpanel .jdesc b { color: var(--ink); }
+
+  /* ── zoom controls ── */
+  #zoom { position: fixed; z-index: 40; left: 12px; bottom: 12px; display: flex; flex-direction: column; gap: 5px; }
+  #zoom button {
+    width: 32px; height: 32px; border-radius: 9px; border: 1px solid var(--line);
+    background: var(--surface); color: var(--ink-soft); cursor: pointer; font: 650 15px/1 var(--sans);
+    box-shadow: var(--shadow);
+  }
+  #zoom button:hover { color: var(--ink); border-color: var(--line-strong); }
+  #zoom .fit { font-size: 10.5px; }
+
+  /* ── DATA validation banner — the engine shows it only while DATA has problems ── */
+  #datawarn {
+    position: fixed; z-index: 70; left: 50%; bottom: 14px; transform: translateX(-50%);
+    max-width: min(760px, calc(100vw - 24px)); max-height: 40vh; overflow: auto; cursor: pointer;
+    background: var(--danger); color: #fff; font: 600 12px/1.45 var(--sans);
+    padding: 9px 14px; border-radius: 9px; box-shadow: var(--shadow);
+  }
+  #datawarn ul { margin: 6px 0 0; padding-left: 18px; font-weight: 400; }
+
+  /* ── panel fact list ── */
+  #panel .lead { font: 600 13.5px/1.5 var(--sans); color: var(--ink); margin: 0 0 10px; }
+  #panel .facts { list-style: none; margin: 0 0 16px; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+  #panel .facts li { position: relative; padding-left: 18px; font-size: 12.5px; line-height: 1.5; color: var(--ink-soft); }
+  #panel .facts li::before { content: ""; position: absolute; left: 0; top: 6px; width: 7px; height: 7px; border-radius: 2px; background: var(--pc, var(--accent)); }
+  #panel .facts b { color: var(--ink); font-weight: 650; }
+</style>
+
+<div class="bar">
+  <span class="title">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5" cy="6" r="2.2"/><circle cx="19" cy="5" r="2.2"/><circle cx="12" cy="12" r="2.6"/><circle cx="5" cy="19" r="2.2"/><circle cx="19" cy="18" r="2.2"/><path d="M6.8 7.2 10 10.4M14 10.5l3.2-3.7M6.9 17.6l3.1-3.4M14.2 13.7l3 2.9"/></svg>
+    PROJECT NAME — Knowledge Map
+  </span>
+  <span class="hint">drag to pan · scroll to zoom · hover previews · click reads</span>
+  <div class="bar-spacer"></div>
+  <div class="legend" id="legend"></div>
+  <button class="jbtn" id="jtoggle" type="button">Journey</button>
+  <nav class="switch" aria-label="View">
+    <a class="cur" href="knowledge-map.html" aria-current="page">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5" cy="6" r="2.2"/><circle cx="19" cy="5" r="2.2"/><circle cx="12" cy="12" r="2.6"/><circle cx="5" cy="19" r="2.2"/><circle cx="19" cy="18" r="2.2"/><path d="M6.8 7.2 10 10.4M14 10.5l3.2-3.7M6.9 17.6l3.1-3.4M14.2 13.7l3 2.9"/></svg>
+      Map
+    </a>
+    <a href="index.html" id="fg-link">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="1.5"/><path d="M7.5 8h9M7.5 12h9M7.5 16h5.5"/></svg>
+      Field guide
+    </a>
+  </nav>
+  <div class="theme-switch" role="group" aria-label="Theme">
+    <button type="button" data-set="light" aria-label="Light theme" title="Light"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg></button>
+    <button type="button" data-set="auto" aria-label="Follow system theme" title="Auto"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor" stroke="none"/></svg></button>
+    <button type="button" data-set="dark" aria-label="Dark theme" title="Dark"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></button>
+  </div>
+</div>
+
+<div id="viewport"><div id="world">
+  <svg id="edges"></svg>
+</div></div>
+
+<div id="peek" role="tooltip"></div>
+
+<aside id="panel" aria-label="Topic reader" inert>
+  <div class="ph">
+    <button class="close" type="button" aria-label="Close panel">✕</button>
+    <span class="pg" id="p-group"></span>
+    <h2 id="p-title"></h2>
+    <p class="stgline" id="p-stage" hidden></p>
+  </div>
+  <div id="jpanel" hidden>
+    <p class="jlab"><span id="j-label"></span> · <span id="j-step"></span></p>
+    <div class="jrow">
+      <button type="button" id="j-prev" aria-label="Previous stage">‹</button>
+      <div class="jsegs" id="jsegs"></div>
+      <button type="button" id="j-next" aria-label="Next stage">›</button>
+    </div>
+    <p class="jdesc" id="j-desc"></p>
+  </div>
+  <div class="pb">
+    <p class="lead" id="p-lead"></p>
+    <ul class="facts" id="p-facts"></ul>
+    <a class="openlink" id="p-open" href="#">Read the full page <span aria-hidden="true">↗</span></a>
+    <p class="clabel" id="p-clabel">Connected topics</p>
+    <div class="conn" id="p-conn"></div>
+  </div>
+</aside>
+
+<div id="zoom">
+  <button type="button" id="z-in" aria-label="Zoom in">+</button>
+  <button type="button" id="z-out" aria-label="Zoom out">−</button>
+  <button type="button" id="z-fit" class="fit" aria-label="Fit map to window">fit</button>
+</div>
+
+<div id="datawarn" hidden></div>
+
+<script>
+/* ══════════ DATA START — replace everything down to DATA END ══════════ */
+/* SITE — the per-site strings; the engine writes them into the page at load */
+var SITE = {
+  title: "PROJECT NAME — Knowledge Map",       /* SLOT: written into the <title> at load — replace that tag too */
+  journeyLabel: "The journey",                 /* SLOT: label above the stage stepper, e.g. "The credential's journey" */
+  journeyHint: "Trace the stages in order",    /* SLOT: tooltip on the Journey button */
+  fieldGuideHref: "index.html",                /* SLOT: where the "Field guide" switcher goes */
+  themeKey: "SITE-KEY-theme"                   /* SLOT: one key per site, shared with every field-guide page */
+};
+
+/* GROUPS — 4–6 clusters; the hue tokens --g-1 … --g-6 are defined in all three theme blocks */
+var GROUPS = {
+  found: { name: "Foundations",        c: "var(--g-1)" },
+  run:   { name: "Standalone runtime", c: "var(--g-2)" },
+  file:  { name: "File-auth security", c: "var(--g-3)" },
+  cont:  { name: "Continuity",         c: "var(--g-4)" },
+  org:   { name: "Organization plane", c: "var(--g-5)" },
+  stat:  { name: "Program status",     c: "var(--g-6)" }
+};
+
+var NODES = [
+  { id:"why-a-pool", g:"found", x:225, y:295, title:"Why a pool exists",
+    teaser:"ADR-0096 and the three old safety rules it deliberately replaced.",
+    what:["<b>One job:</b> own many named LLM credentials — API keys, OAuth records, Codex auth.json, local endpoints","<b>Four verbs:</b> select per request · rotate on limits · recover interrupted work · share org-wide","<b>Start here</b> — ADR-0096 replaced three older safety rules with the pool"] },
+  { id:"where-it-lives", g:"found", x:200, y:585, title:"Where the code lives",
+    teaser:"Branch geography: five delivered phases on integration branches, nothing on main.",
+    what:["<b>Five phases finished and gated</b> — none of it on any main","<b>Each phase = one integration branch</b> in the repo it touches (brokkr, umbrella, mythical-ctl, asgard-registry)","<b>Stacked in order,</b> each merged only after its review gate passed"] },
+  { id:"credential-vs-capacity", g:"found", x:420, y:440, title:"Credential vs capacity domain",
+    teaser:"The correction that prevents a convincing but false “rotation succeeded”.",
+    what:["<b>Credential</b> = what you can hold: a key string, an OAuth record, an auth.json","<b>Capacity domain</b> = what the provider limits: the account whose quota keys share","<b>Every row carries both ids</b> — so a second key on the same exhausted account is recognized as no rotation at all"] },
+  { id:"local-store", g:"run", x:605, y:185, title:"The local store",
+    teaser:"The bun:sqlite inventory, schema v1→v5, and why v5 exists at all.",
+    what:["<b>One bun:sqlite database,</b> sixteen STRICT tables","<b>Holds:</b> catalog · domains · project bindings · quota observations · usage · leases · homes · recovery state · sync outbox","<b>No secret bytes inside</b> — descriptors point at named secret slots"] },
+  { id:"leases", g:"run", x:605, y:370, title:"Non-exclusive leases",
+    teaser:"Why a lease is not a seat, and the twelve-session proof (ADR-0098).",
+    what:["<b>A delivery receipt, not a lock:</b> binds session + credential + capacity domain + generation","<b>Expires unless renewed</b>","<b>Any number of sessions</b> can lease one credential at once — capacity, never seats (ADR-0098, proven at twelve)"] },
+  { id:"provider-adapters", g:"run", x:620, y:700, title:"Provider adapters & support labels",
+    teaser:"Support is an input, not an assumption — why real modes ship disabled.",
+    what:["<b>Five adapters:</b> Anthropic API · OpenAI API · Claude subscription · Codex subscription · local endpoints","<b>Each one:</b> declares its lanes, plans the auth header, parses quota signals, classifies failures","<b>Support labels are claims</b> — P0-H demands executed probes before real modes enable"] },
+  { id:"request-broker", g:"run", x:830, y:285, title:"The request broker",
+    teaser:"Auth injected at the request boundary; replay safety decided by bytes seen.",
+    what:["<b>A per-session loopback proxy</b> — the harness sends its normal request","<b>Secret injected at the last moment;</b> the session process never holds it","<b>Quota headers read off the response</b> — the earliest place capacity truth exists"] },
+  { id:"capacity-and-quota", g:"run", x:900, y:515, title:"Capacity, quota & the reserve",
+    teaser:"Provider-authoritative bars, the 5% reserve, honest “percentage unavailable”.",
+    what:["<b>Provider signals in</b> (headers, 429s, reset times) → one derived state per capacity domain","<b>The reserve drains first</b> (5% by default) — rotation happens before the tank is empty","<b>Then:</b> rotate, or pause-until-reset"] },
+  { id:"isolated-homes", g:"file", x:1112, y:160, title:"Isolated homes & the volatile mount",
+    teaser:"Twelve honest copies on a tmpfs, registered before written (ADR-0099).",
+    what:["<b>auth.json must live in a home dir</b> — it cannot be injected per-request","<b>Each Codex session:</b> a private home on a volatile tmpfs, exactly one credential file","<b>Registered before written</b> (ADR-0099) — a crash can never orphan an unknown copy"] },
+  { id:"fail-closed-teardown", g:"file", x:1300, y:200, title:"Fail-closed teardown",
+    teaser:"The H-1 saga: proving children dead, the write-ahead sentinel, the accepted residual.",
+    what:["<b>“Revoked” means gone:</b> every child process proven dead before any home is wiped","<b>Unprovable → quarantined, loudly</b> — never silently wiped","<b>The boot sweep</b> re-proves the world clean after a crash, before the pool arms"] },
+  { id:"rotation-recovery", g:"cont", x:1100, y:400, title:"Rotation & automatic recovery",
+    teaser:"The operation ledger, none|completed|possible|unknown, and the 3-cycle bound.",
+    what:["<b>No answer bytes seen → safe replay</b> on another credential","<b>Bytes seen → never replayed:</b> persist, switch, resume with reconcile instructions","<b>Bounded at three failed cycles;</b> durable across daemon restarts"] },
+  { id:"presentation", g:"cont", x:1110, y:490, title:"What the UI and CLI may show",
+    teaser:"The secret-free DTO and why no progress bar is ever guessed.",
+    what:["<b>Strict, secret-free DTOs</b> — one nine-field per-session block","<b>Shared verbatim:</b> Control Room · HTTP API · Go CLI · the frozen §7.2 field list","<b>Nothing is guessed for display</b> — absence renders as absence"] },
+  { id:"org-pool-wire", g:"org", x:1300, y:555, title:"The org-pool wire",
+    teaser:"The frozen device contract: catalog sync, tombstones, grant windows, reconnect ordering.",
+    what:["<b>The frozen v1 contract</b> between every container (“device”) and the Asgard registry — 27 zod schema families","<b>Covers:</b> contribution · rotation · catalog sync with tombstones · short sealed leases renewed mid-answer","<b>Revocation acks</b> per materialized copy"] },
+  { id:"custody-enrollment", g:"org", x:1460, y:670, title:"Custody & device enrollment",
+    teaser:"How a container proves who it is, and where org secrets will actually live.",
+    what:["<b>Enrollment:</b> a machine-bound cryptographic identity per container","<b>Custody:</b> secrets travel only inside sealed envelopes","<b>Registry side:</b> an OpenBao-backed store replaces plaintext custody (CP-41)"] },
+  { id:"verification-story", g:"stat", x:1520, y:150, title:"How it was verified",
+    teaser:"What codex gates, fresh-context reviewers and the full suite each caught — and missed.",
+    what:["<b>Four independent nets per phase:</b> codex review to CLEAN · fresh-context reviewers · full-suite floor · in-code structural guards","<b>Each layer caught defects</b> every other layer missed"] },
+  { id:"whats-not-real", g:"stat", x:1510, y:340, title:"What is not real yet",
+    teaser:"The P0-H gate, in-flight Phase 4, the A34 arc, and every accepted residual in one place.",
+    what:["<b>The gap list:</b> disabled provider modes · inert machinery · unmerged phases · accepted residuals","<b>The one external gate:</b> the P0-H probe packet — only you can clear it"] }
+];
+
+/* JOURNEY — the guided tour: stage number, node, stage title, what happens (1..n in narrative order) */
+var JOURNEY = [
+  { n:1, id:"local-store",          t:"Add a credential",            d:"You name a credential on the Keys page; it becomes a row in the local inventory — the secret kept out of agent reach." },
+  { n:2, id:"leases",               t:"A session needs a model",     d:"The allocator picks a credential and hands out a non-exclusive lease — twelve sessions can share one key." },
+  { n:3, id:"request-broker",       t:"The request is brokered",     d:"The secret is injected at the last moment; quota headers are read off the response." },
+  { n:4, id:"isolated-homes",       t:"Codex sign-in materializes",  d:"File auth can't be brokered — the session gets a private tmpfs home, registered before the secret is written." },
+  { n:5, id:"capacity-and-quota",   t:"The provider says “limit”",   d:"The capacity domain — the account, not the key — flips; the reserve drains, then rotate or pause." },
+  { n:6, id:"rotation-recovery",    t:"A request dies mid-answer",   d:"Replay only when provably safe (no answer bytes seen); otherwise switch credential, resume, reconcile." },
+  { n:7, id:"fail-closed-teardown", t:"You revoke",                  d:"Every child process is proven dead before any home is wiped; anything unprovable is loudly quarantined." },
+  { n:8, id:"org-pool-wire",        t:"You join an organization",    d:"Every active credential becomes org capacity over the frozen device wire — sealed leases, tombstones, acks." },
+  { n:9, id:"whats-not-real",       t:"Go live — the blocked edge",  d:"Release waits on the P0-H probe packet and the mandated reaper fix. This stage is yours to unblock." }
+];
+
+/* semantic edges: [a, b, why, panelOnly] — panelOnly edges are listed in the reader
+   panel but not drawn (they would cross the whole map; the panel carries them). */
+var EDGES = [
+  ["why-a-pool","local-store","The inventory the pool decision created"],
+  ["why-a-pool","leases","Replaced the one-key-one-agent safety rule"],
+  ["why-a-pool","where-it-lives","Decision → where the delivered code sits"],
+  ["credential-vs-capacity","leases","A lease binds both ids: credential + domain"],
+  ["credential-vs-capacity","capacity-and-quota","The domain is what a quota signal flips"],
+  ["credential-vs-capacity","rotation-recovery","Prevents false “rotation succeeded” on one account", 1],
+  ["local-store","isolated-homes","Homes are registered here before secrets are written"],
+  ["local-store","presentation","Secret-free DTOs are read off the store", 1],
+  ["local-store","leases","Leases are rows with expiry, not locks"],
+  ["provider-adapters","request-broker","Adapters plan the auth header the broker injects"],
+  ["provider-adapters","capacity-and-quota","Adapters parse provider signals into observations"],
+  ["provider-adapters","whats-not-real","Unproven support labels are why release is gated", 1],
+  ["request-broker","rotation-recovery","Bytes-seen at the broker decides replay safety"],
+  ["request-broker","isolated-homes","What cannot be brokered becomes a file — auth.json"],
+  ["request-broker","capacity-and-quota","Quota headers are read off the brokered response"],
+  ["isolated-homes","fail-closed-teardown","Every home must be provably wiped on revoke"],
+  ["capacity-and-quota","rotation-recovery","Reserve drains → rotate or pause-until-reset"],
+  ["rotation-recovery","presentation","Recovery state is shown, never guessed"],
+  ["rotation-recovery","whats-not-real","The replay seam is built but inert at the pin"],
+  ["org-pool-wire","custody-enrollment","The wire assumes an enrolled, sealed identity"],
+  ["org-pool-wire","leases","Org capacity arrives as short sealed leases", 1],
+  ["where-it-lives","whats-not-real","Nothing on main — the geography of the gap", 1],
+  ["verification-story","whats-not-real","What the nets caught vs what remains open"],
+  ["verification-story","fail-closed-teardown","Five review rounds of real fail-opens"]
+];
+
+/* group zones: [g, x, y, w, h] */
+var ZONES = [
+  ["found", 105, 235, 405, 430],
+  ["run",   515, 110, 485, 660],
+  ["file",  1020, 100, 385, 168],
+  ["cont",  1005, 335, 195, 215],
+  ["org",   1205, 500, 360, 245],
+  ["stat",  1414, 90, 206, 330]
+];
+
+/* ══════════ DATA END — engine below, do not edit ══════════ */
+/* ══════════ VALIDATOR START — shared with templates/check-map (extracted by these markers) ══════════ */
+var NODE_W = 176, NODE_H = 84; /* the node box the CSS renders: .node is 176px wide and exactly 84px tall (title clamps to two lines, group label to one) */
+var STAGE_PAD = 12;            /* the .stg journey badge (9px overhang + its ground-ring shadow) protrudes above and right of the card */
+/* the rectangle a node occupies: the card, plus the badge's top/right overhang when the node carries a journey stage */
+function nodeBounds(n, staged) {
+  var bp = staged && staged[n.id] ? STAGE_PAD : 0;
+  return { x1: n.x - NODE_W / 2, x2: n.x + NODE_W / 2 + bp, y1: n.y - NODE_H / 2 - bp, y2: n.y + NODE_H / 2 };
+}
+var ROUTE_PAD = 8;             /* clearance edges keep from node boxes when routing */
+/* the orthogonal candidate routes between two points: straight, one bend either way, two bends through the midpoint */
+function routeCandidates(a, b) {
+  if (a.x === b.x || a.y === b.y) return [[a, b]];
+  var mx = Math.round((a.x + b.x) / 2), my = Math.round((a.y + b.y) / 2);
+  return [
+    [a, { x: b.x, y: a.y }, b],
+    [a, { x: a.x, y: b.y }, b],
+    [a, { x: mx, y: a.y }, { x: mx, y: b.y }, b],
+    [a, { x: a.x, y: my }, { x: b.x, y: my }, b]
+  ];
+}
+function segsOf(pts) {
+  var out = [];
+  for (var k = 0; k < pts.length - 1; k++) {
+    if (pts[k].x !== pts[k + 1].x || pts[k].y !== pts[k + 1].y)
+      out.push({ x1: pts[k].x, y1: pts[k].y, x2: pts[k + 1].x, y2: pts[k + 1].y });
+  }
+  return out;
+}
+/* does an H or V segment cross node n's padded box (badge included when staged)? */
+function rectHit(seg, n, staged) {
+  var b = nodeBounds(n, staged);
+  var rx1 = b.x1 - ROUTE_PAD, rx2 = b.x2 + ROUTE_PAD, ry1 = b.y1 - ROUTE_PAD, ry2 = b.y2 + ROUTE_PAD;
+  if (seg.y1 === seg.y2) {
+    if (seg.y1 < ry1 || seg.y1 > ry2) return false;
+    var lo = Math.min(seg.x1, seg.x2), hi = Math.max(seg.x1, seg.x2);
+    return hi > rx1 && lo < rx2;
+  }
+  if (seg.x1 < rx1 || seg.x1 > rx2) return false;
+  var lo2 = Math.min(seg.y1, seg.y2), hi2 = Math.max(seg.y1, seg.y2);
+  return hi2 > ry1 && lo2 < ry2;
+}
+/* the ids of the nodes (other than the endpoints) a candidate route crosses */
+function routeHits(pts, nodes, skipA, skipB, staged) {
+  var hit = [];
+  segsOf(pts).forEach(function (seg) {
+    nodes.forEach(function (n) {
+      if (n.id === skipA || n.id === skipB || hit.indexOf(n.id) >= 0) return;
+      if (rectHit(seg, n, staged)) hit.push(n.id);
+    });
+  });
+  return hit;
+}
+function validateMapData(SITE, GROUPS, NODES, EDGES, ZONES, JOURNEY) {
+  var p = [];
+  function isStr(s) { return typeof s === "string" && s.trim().length > 0; }
+  function isNum(v) { return typeof v === "number" && isFinite(v); }
+  function isCoord(v) { return isNum(v) && v >= 0; }
+  function plain(s) { return isStr(s) && s.indexOf("<") < 0; }
+  function has(o, k) { return Object.prototype.hasOwnProperty.call(o, k); }
+  if (!SITE || typeof SITE !== "object") { p.push("SITE is missing or not an object"); SITE = {}; }
+  if (!GROUPS || typeof GROUPS !== "object" || Array.isArray(GROUPS)) { p.push("GROUPS is missing or not an object"); GROUPS = {}; }
+  else if (!Object.keys(GROUPS).length) p.push("GROUPS is empty");
+  if (!Array.isArray(NODES)) { p.push("NODES must be an array"); NODES = []; }
+  if (!Array.isArray(EDGES)) { p.push("EDGES must be an array"); EDGES = []; }
+  if (!Array.isArray(ZONES)) { p.push("ZONES must be an array"); ZONES = []; }
+  if (!Array.isArray(JOURNEY)) { p.push("JOURNEY must be an array"); JOURNEY = []; }
+  ["title", "journeyLabel", "journeyHint", "fieldGuideHref", "themeKey"].forEach(function (k) {
+    if (!SITE || !isStr(SITE[k])) p.push("SITE." + k + " is missing");
+  });
+  if (SITE && /PROJECT NAME/.test(SITE.title || "")) p.push("[placeholder] SITE.title still says PROJECT NAME");
+  if (SITE && SITE.themeKey === "SITE-KEY-theme") p.push("[placeholder] SITE.themeKey is still SITE-KEY-theme");
+  if (SITE && isStr(SITE.fieldGuideHref) && /^([a-z][a-z0-9+.\-]*:|\/\/|\/)/i.test(SITE.fieldGuideHref))
+    p.push("SITE.fieldGuideHref must be a relative path inside the package — no scheme, no leading /");
+  var zoneOf = Object.create(null);
+  ZONES.forEach(function (z, i) {
+    if (!Array.isArray(z) || z.length !== 5) { p.push("ZONES[" + i + "] must be [group, x, y, w, h]"); return; }
+    if (!has(GROUPS, z[0])) p.push("ZONES[" + i + "] names unknown group '" + z[0] + "'");
+    if (!isCoord(z[1]) || !isCoord(z[2]) || !isNum(z[3]) || z[3] <= 0 || !isNum(z[4]) || z[4] <= 0) {
+      p.push("ZONES[" + i + "] (" + z[0] + ") needs finite x,y ≥ 0 and w,h > 0"); return;
+    }
+    if (zoneOf[z[0]]) p.push("group '" + z[0] + "' has more than one zone");
+    zoneOf[z[0]] = { x: z[1], y: z[2], w: z[3], h: z[4] };
+  });
+  Object.keys(GROUPS).forEach(function (g) {
+    var grp = GROUPS[g];
+    if (!grp || typeof grp !== "object" || Array.isArray(grp) || !isStr(grp.name) || !isStr(grp.c)) p.push("GROUPS." + g + " must be an object with name and c");
+    else if (!plain(grp.name) || grp.name.length > 24) p.push("GROUPS." + g + " name must be plain text, at most 24 characters (it renders on one-line labels)");
+    if (!zoneOf[g]) p.push("group '" + g + "' has no zone");
+  });
+  var zg = Object.keys(zoneOf);
+  for (var i = 0; i < zg.length; i++) for (var j = i + 1; j < zg.length; j++) {
+    var a = zoneOf[zg[i]], b = zoneOf[zg[j]];
+    if (a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h)
+      p.push("zones '" + zg[i] + "' and '" + zg[j] + "' overlap");
+  }
+  var staged = Object.create(null);
+  JOURNEY.forEach(function (s) { if (s && typeof s === "object" && isStr(s.id)) staged[s.id] = 1; });
+  var seen = Object.create(null), placed = [];
+  NODES.forEach(function (n, i) {
+    if (!n || typeof n !== "object" || Array.isArray(n)) { p.push("NODES[" + i + "] is not a node object"); return; }
+    var tag = "NODES[" + i + "]" + (n.id ? " " + n.id : "");
+    if (!isStr(n.id)) p.push(tag + " has no id");
+    else if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(n.id)) p.push(tag + " id must be a slug — lowercase letters, digits, single hyphens — it names topics/<id>.html");
+    else if (seen[n.id]) p.push(tag + " duplicates an id"); else seen[n.id] = n;
+    if (!has(GROUPS, n.g)) p.push(tag + " names unknown group '" + n.g + "'");
+    var coordsOk = isCoord(n.x) && isCoord(n.y);
+    if (!coordsOk) p.push(tag + " needs finite x,y ≥ 0"); else placed.push(n);
+    if (!plain(n.title)) p.push(tag + " needs a plain-text title (no markup)");
+    else if (n.title.length > 44) p.push(tag + " title is " + n.title.length + " chars — over 44 it clamps to two lines on the card");
+    if (!plain(n.teaser)) p.push(tag + " needs a plain-text teaser (no markup)");
+    if (!Array.isArray(n.what)) p.push(tag + " .what must be an array of fact strings, not a paragraph");
+    else {
+      if (n.what.length < 2 || n.what.length > 3) p.push(tag + " .what has " + n.what.length + " facts (want 2–3)");
+      n.what.forEach(function (f, k) {
+        if (!isStr(f)) p.push(tag + " .what[" + k + "] is not a non-empty string");
+        else if (!/^<b>[^<]+<\/b>/.test(f)) p.push(tag + " .what[" + k + "] needs a bolded lead-in: \"<b>Lead:</b> rest of the fact\"");
+      });
+    }
+    var z = zoneOf[n.g];
+    if (z && coordsOk) {
+      var b = nodeBounds(n, staged);
+      if (b.x1 < z.x || b.x2 > z.x + z.w || b.y1 < z.y || b.y2 > z.y + z.h)
+        p.push(tag + " box x[" + b.x1 + "," + b.x2 + "] y[" + b.y1 + "," + b.y2 + "]" + (staged[n.id] ? " (incl. the journey badge)" : "") + " leaves zone '" + n.g +
+          "' x[" + z.x + "," + (z.x + z.w) + "] y[" + z.y + "," + (z.y + z.h) + "]");
+    }
+  });
+  for (var m = 0; m < placed.length; m++) for (var q = m + 1; q < placed.length; q++) {
+    var A2 = nodeBounds(placed[m], staged), B2 = nodeBounds(placed[q], staged);
+    if (A2.x1 < B2.x2 && B2.x1 < A2.x2 && A2.y1 < B2.y2 && B2.y1 < A2.y2)
+      p.push("nodes '" + placed[m].id + "' and '" + placed[q].id + "' overlap" + ((staged[placed[m].id] || staged[placed[q].id]) ? " (incl. the journey badge)" : ""));
+  }
+  var pairs = Object.create(null);
+  EDGES.forEach(function (e, i) {
+    if (!Array.isArray(e) || e.length < 3) { p.push("EDGES[" + i + "] must be [a, b, why, panelOnly?]"); return; }
+    var tag = "EDGES[" + i + "] " + e[0] + "→" + e[1];
+    if (!seen[e[0]]) p.push(tag + ": unknown id '" + e[0] + "'");
+    if (!seen[e[1]]) p.push(tag + ": unknown id '" + e[1] + "'");
+    if (e[0] === e[1]) p.push(tag + ": self-edge");
+    if (!isStr(e[2])) p.push(tag + ": has no 'why these connect' — an unlabeled edge is decoration");
+    var k = [e[0], e[1]].sort().join("|");
+    if (pairs[k] !== undefined) p.push(tag + ": duplicates EDGES[" + pairs[k] + "]"); else pairs[k] = i;
+    var A = seen[e[0]], B = seen[e[1]];
+    if (!e[3] && A && B && placed.indexOf(A) >= 0 && placed.indexOf(B) >= 0) {
+      var cands = routeCandidates({ x: A.x, y: A.y }, { x: B.x, y: B.y }), worst = null;
+      var clear = cands.some(function (c) { var h = routeHits(c, placed, A.id, B.id, staged); if (!worst || h.length < worst.length) worst = h; return h.length === 0; });
+      if (!clear) p.push(tag + ": every orthogonal route crosses another node (" + worst.join(", ") + ") — move nodes, or mark the edge panel-only");
+    }
+  });
+  if (!JOURNEY.length) p.push("JOURNEY is empty — the guided tour needs at least one stage");
+  JOURNEY.forEach(function (s, i) {
+    if (!s || typeof s !== "object") { p.push("JOURNEY[" + i + "] is not a stage object"); return; }
+    var tag = "JOURNEY[" + i + "]";
+    if (!seen[s.id]) p.push(tag + ": unknown id '" + s.id + "'");
+    if (s.n !== i + 1) p.push(tag + ": n is " + s.n + ", expected " + (i + 1) + " (stages run 1..n in order)");
+    if (!isStr(s.t) || !isStr(s.d)) p.push(tag + ": needs t (stage title) and d (what happens)");
+  });
+  return p;
+}
+/* the well-formed subset the engine can safely build over — the validator has already named what is dropped */
+function normalizeMapData(GROUPS, NODES, EDGES, ZONES, JOURNEY) {
+  function isNum(v) { return typeof v === "number" && isFinite(v); }
+  function isStr(s) { return typeof s === "string" && s.trim().length > 0; }
+  var G = Object.create(null);
+  if (GROUPS && typeof GROUPS === "object" && !Array.isArray(GROUPS)) Object.keys(GROUPS).forEach(function (g) {
+    var grp = GROUPS[g];
+    if (grp && typeof grp === "object" && !Array.isArray(grp) && isStr(grp.name) && isStr(grp.c)) G[g] = grp;
+  });
+  var Zs = Array.isArray(ZONES) ? ZONES : [], Ns = Array.isArray(NODES) ? NODES : [], Es = Array.isArray(EDGES) ? EDGES : [], Js = Array.isArray(JOURNEY) ? JOURNEY : [];
+  var zones = Zs.filter(function (z) {
+    return Array.isArray(z) && z.length === 5 && G[z[0]] && isNum(z[1]) && isNum(z[2]) && isNum(z[3]) && z[3] > 0 && isNum(z[4]) && z[4] > 0;
+  });
+  var seen = Object.create(null);
+  var nodes = Ns.filter(function (n) {
+    var ok = !!(n && isStr(n.id) && !seen[n.id] && G[n.g] && isNum(n.x) && isNum(n.y) && isStr(n.title) && Array.isArray(n.what));
+    if (ok) seen[n.id] = 1;
+    return ok;
+  });
+  var edges = Es.filter(function (e) { return Array.isArray(e) && seen[e[0]] && seen[e[1]] && e[0] !== e[1]; });
+  var journey = Js.filter(function (s) { return !!(s && seen[s.id]); });
+  return { groups: G, nodes: nodes, edges: edges, zones: zones, journey: journey };
+}
+/* ══════════ VALIDATOR END ══════════ */
+var WORLD_PAD = 40;  /* margin around the outermost zone */
+
+/* ══ read DATA defensively (a deleted declaration must report, not throw), apply SITE, validate ══ */
+var RAW = {
+  SITE: typeof SITE === "undefined" ? undefined : SITE,
+  GROUPS: typeof GROUPS === "undefined" ? undefined : GROUPS,
+  NODES: typeof NODES === "undefined" ? undefined : NODES,
+  EDGES: typeof EDGES === "undefined" ? undefined : EDGES,
+  ZONES: typeof ZONES === "undefined" ? undefined : ZONES,
+  JOURNEY: typeof JOURNEY === "undefined" ? undefined : JOURNEY
+};
+var S = (RAW.SITE && typeof RAW.SITE === "object") ? RAW.SITE : {};
+if (typeof S.title === "string") { document.title = S.title; document.querySelector(".bar .title").lastChild.textContent = " " + S.title; }
+if (typeof S.journeyHint === "string") document.getElementById("jtoggle").title = S.journeyHint;
+document.getElementById("j-label").textContent = typeof S.journeyLabel === "string" ? S.journeyLabel : "";
+if (typeof S.fieldGuideHref === "string") document.getElementById("fg-link").href = S.fieldGuideHref;
+(function () {
+  var problems = validateMapData(RAW.SITE, RAW.GROUPS, RAW.NODES, RAW.EDGES, RAW.ZONES, RAW.JOURNEY);
+  if (!problems.length) return;
+  problems.forEach(function (m) { console.warn("knowledge-map DATA: " + m); });
+  var w = document.getElementById("datawarn");
+  w.innerHTML = problems.length + " DATA problem" + (problems.length > 1 ? "s" : "") +
+    " — fix before shipping (also listed in the console; click to dismiss)<ul>" +
+    problems.map(function (m) { return "<li>" + m.replace(/&/g, "&amp;").replace(/</g, "&lt;") + "</li>"; }).join("") + "</ul>";
+  w.hidden = false;
+  w.addEventListener("click", function () { w.hidden = true; });
+})();
+
+/* ══ theme (same key as the site) ══ */
+(function () {
+  var root = document.documentElement, KEY = (typeof S.themeKey === "string" && S.themeKey) ? S.themeKey : "SITE-KEY-theme";
+  var buttons = document.querySelectorAll(".theme-switch button");
+  function stored() { try { return localStorage.getItem(KEY); } catch (e) { return null; } }
+  function applyT(mode) {
+    if (mode === "light" || mode === "dark") root.setAttribute("data-theme", mode);
+    else { root.removeAttribute("data-theme"); mode = "auto"; }
+    buttons.forEach(function (b) { b.setAttribute("aria-pressed", String(b.getAttribute("data-set") === mode)); });
+  }
+  buttons.forEach(function (b) {
+    b.addEventListener("click", function () {
+      var mode = b.getAttribute("data-set");
+      try { if (mode === "auto") localStorage.removeItem(KEY); else localStorage.setItem(KEY, mode); } catch (e) {}
+      applyT(mode);
+    });
+  });
+  applyT(stored());
+})();
+
+/* ══ the engine builds over the well-formed subset only ══ */
+var D = normalizeMapData(RAW.GROUPS, RAW.NODES, RAW.EDGES, RAW.ZONES, RAW.JOURNEY);
+
+/* ══ state ══ */
+var byId = Object.create(null); D.nodes.forEach(function(n){ byId[n.id] = n; });
+var stageOf = Object.create(null); D.journey.forEach(function(s){ (stageOf[s.id] = stageOf[s.id] || []).push(s.n); });
+var world = document.getElementById("world");
+var svg = document.getElementById("edges");
+var offGroups = Object.create(null);
+var selected = null, journeyOn = false, jIndex = 0;
+
+/* ══ world size from the data ══ */
+var BB = { x1: Infinity, y1: Infinity, x2: 0, y2: 0 };
+D.zones.forEach(function(z){ BB.x1 = Math.min(BB.x1, z[1]); BB.y1 = Math.min(BB.y1, z[2]); BB.x2 = Math.max(BB.x2, z[1] + z[3]); BB.y2 = Math.max(BB.y2, z[2] + z[4]); });
+D.nodes.forEach(function(n){ BB.x1 = Math.min(BB.x1, n.x - NODE_W / 2); BB.y1 = Math.min(BB.y1, n.y - NODE_H / 2); BB.x2 = Math.max(BB.x2, n.x + NODE_W / 2); BB.y2 = Math.max(BB.y2, n.y + NODE_H / 2); });
+world.style.width = (BB.x2 + WORLD_PAD) + "px"; world.style.height = (BB.y2 + WORLD_PAD) + "px";
+
+/* ══ build zones + nodes ══ */
+D.zones.forEach(function(z){
+  var d = document.createElement("div");
+  d.className = "gzone"; d.style.cssText = "--c:" + D.groups[z[0]].c + ";left:" + z[1] + "px;top:" + z[2] + "px;width:" + z[3] + "px;height:" + z[4] + "px";
+  d.innerHTML = '<span class="gl">' + D.groups[z[0]].name + "</span>";
+  world.appendChild(d);
+});
+D.nodes.forEach(function(n){
+  var d = document.createElement("div");
+  d.className = "node"; d.id = "n-" + n.id; d.tabIndex = 0;
+  d.style.cssText = "--c:" + D.groups[n.g].c + ";left:" + n.x + "px;top:" + n.y + "px";
+  var stg = stageOf[n.id] ? '<span class="stg">' + stageOf[n.id].join("·") + "</span>" : "";
+  d.innerHTML = stg + '<p class="nt">' + n.title + '</p><span class="ng">' + D.groups[n.g].name + "</span>";
+  d.addEventListener("click", function(e){ e.stopPropagation(); select(n.id); });
+  d.addEventListener("keydown", function(e){ if (e.key === "Enter" || e.key === " ") { e.preventDefault(); select(n.id); } });
+  d.addEventListener("mouseenter", function(e){ peekNode(n, d); });
+  d.addEventListener("mouseleave", hidePeek);
+  world.appendChild(d);
+});
+
+/* ══ edges: orthogonal (H/V only) routes with rounded bends and bridge hops ══ */
+var drawn = [];
+D.edges.forEach(function(e, i){ if (!e[3]) drawn.push(i); });
+
+/* pick the candidate that crosses no node; if all do (the validator has already flagged it), the fewest-bends least-crossing one */
+function route(aN, bN) {
+  var cands = routeCandidates({ x: aN.x, y: aN.y }, { x: bN.x, y: bN.y });
+  var best = cands[0], bs = 1e9;
+  cands.forEach(function(c){
+    var s = (c.length - 2) * 1.5 + routeHits(c, D.nodes, aN.id, bN.id, stageOf).length * 1000;
+    if (s < bs) { bs = s; best = c; }
+  });
+  return best;
+}
+/* build a path with rounded bends (cr) and hop arcs (r) over prior perpendicular segments */
+function buildPath(ptsIn, prior) {
+  var r = 8, cr = 7;
+  var pts = ptsIn.map(function(p){ return { x: p.x, y: p.y }; });
+  var d = "M" + pts[0].x + " " + pts[0].y;
+  for (var k = 0; k < pts.length - 1; k++) {
+    var p = pts[k], q = pts[k+1];
+    var ux = Math.sign(q.x - p.x), uy = Math.sign(q.y - p.y);
+    var isLast = (k === pts.length - 2);
+    var endX = isLast ? q.x : q.x - ux * cr;
+    var endY = isLast ? q.y : q.y - uy * cr;
+    var hops = [];
+    prior.forEach(function(s){
+      if (uy === 0 && s.x1 === s.x2) { /* our H vs their V */
+        var x = s.x1, ylo = Math.min(s.y1, s.y2) + 4, yhi = Math.max(s.y1, s.y2) - 4;
+        var xlo = Math.min(p.x, endX) + r + 2, xhi = Math.max(p.x, endX) - r - 2;
+        if (p.y > ylo && p.y < yhi && x > xlo && x < xhi) hops.push(x);
+      } else if (ux === 0 && s.y1 === s.y2) { /* our V vs their H */
+        var y = s.y1, xlo2 = Math.min(s.x1, s.x2) + 4, xhi2 = Math.max(s.x1, s.x2) - 4;
+        var ylo2 = Math.min(p.y, endY) + r + 2, yhi2 = Math.max(p.y, endY) - r - 2;
+        if (p.x > xlo2 && p.x < xhi2 && y > ylo2 && y < yhi2) hops.push(y);
+      }
+    });
+    hops.sort(function(m, n){ return (ux + uy > 0) ? m - n : n - m; });
+    var last = null;
+    hops.forEach(function(h){
+      if (last !== null && Math.abs(h - last) < r * 2 + 2) return;
+      last = h;
+      if (uy === 0) d += " L" + (h - ux * r) + " " + p.y + " A" + r + " " + r + " 0 0 1 " + (h + ux * r) + " " + p.y;
+      else d += " L" + p.x + " " + (h - uy * r) + " A" + r + " " + r + " 0 0 1 " + p.x + " " + (h + uy * r);
+    });
+    d += " L" + endX + " " + endY;
+    if (!isLast) {
+      var nq = pts[k+2];
+      var vx = Math.sign(nq.x - q.x), vy = Math.sign(nq.y - q.y);
+      d += " Q" + q.x + " " + q.y + " " + (q.x + vx * cr) + " " + (q.y + vy * cr);
+      pts[k+1] = { x: q.x + vx * cr, y: q.y + vy * cr };
+    }
+  }
+  return d;
+}
+var NS = "http://www.w3.org/2000/svg";
+var priorSegs = [];
+D.edges.forEach(function(e, i){
+  if (e[3]) return; /* panel-only relation, not drawn */
+  var pts = route(byId[e[0]], byId[e[1]]);
+  var p = document.createElementNS(NS, "path");
+  p.setAttribute("class", "e"); p.setAttribute("d", buildPath(pts, priorSegs)); p.id = "e-" + i;
+  svg.appendChild(p);
+  var h = document.createElementNS(NS, "path");
+  var hd = "M" + pts.map(function(pt){ return pt.x + " " + pt.y; }).join(" L");
+  h.setAttribute("class", "hit"); h.setAttribute("d", hd);
+  h.addEventListener("mouseenter", function(ev){ peekEdge(e, ev); p.classList.add("hl"); });
+  h.addEventListener("mousemove", function(ev){ movePeek(ev.clientX + 14, ev.clientY + 14); });
+  h.addEventListener("mouseleave", function(){ hidePeek(); if (selected === null) p.classList.remove("hl"); else refresh(); });
+  svg.appendChild(h);
+  priorSegs = priorSegs.concat(segsOf(pts));
+});
+/* journey path — orthogonal legs, rounded bends, no hops */
+var jp = document.createElementNS(NS, "path");
+jp.setAttribute("class", "j");
+var jd = "";
+for (var ji = 0; ji < D.journey.length - 1; ji++) {
+  var leg = route(byId[D.journey[ji].id], byId[D.journey[ji + 1].id]);
+  var legD = buildPath(leg, []);
+  jd += ji === 0 ? legD : " " + legD;
+}
+jp.setAttribute("d", jd);
+svg.appendChild(jp);
+
+/* ══ legend ══ */
+var legend = document.getElementById("legend");
+Object.keys(D.groups).forEach(function(g){
+  var b = document.createElement("button");
+  b.type = "button"; b.setAttribute("aria-pressed", "true");
+  b.className = "lg"; b.style.cssText = "--c:" + D.groups[g].c;
+  b.textContent = D.groups[g].name;
+  b.title = "Click to dim/undim this group";
+  b.addEventListener("click", function(){ offGroups[g] = !offGroups[g]; b.classList.toggle("off", !!offGroups[g]); b.setAttribute("aria-pressed", String(!offGroups[g])); refresh(); });
+  legend.appendChild(b);
+});
+
+/* ══ peek card ══ */
+var peek = document.getElementById("peek");
+function movePeek(x, y) {
+  var w = 300, h = peek.offsetHeight || 120;
+  if (x + w + 10 > innerWidth) x = innerWidth - w - 10;
+  if (y + h + 10 > innerHeight) y = y - h - 24;
+  peek.style.left = x + "px"; peek.style.top = y + "px";
+}
+function peekNode(n, el) {
+  var stg = stageOf[n.id] ? " · journey stage " + stageOf[n.id].join(", ") : "";
+  peek.style.cssText = "--pc:" + D.groups[n.g].c;
+  peek.innerHTML = '<span class="pg">' + D.groups[n.g].name + stg + '</span><p class="pt">' + n.title + '</p><p class="pd">' + n.teaser + '</p><p class="pf">click to read → topics/' + n.id + ".html</p>";
+  var r = el.getBoundingClientRect();
+  peek.classList.add("show");
+  movePeek(r.right + 12, r.top - 8);
+}
+function peekEdge(e, ev) {
+  peek.style.cssText = "--pc:var(--accent)";
+  peek.innerHTML = '<span class="pg">connection</span><p class="pt">' + byId[e[0]].title + " ⟷ " + byId[e[1]].title + '</p><p class="pd">' + e[2] + "</p>";
+  peek.classList.add("show");
+  movePeek(ev.clientX + 14, ev.clientY + 14);
+}
+function hidePeek() { peek.classList.remove("show"); }
+
+/* ══ selection + panel ══ */
+var panel = document.getElementById("panel");
+var lastFocus = null;
+function neighbors(id) {
+  var out = [];
+  D.edges.forEach(function(e){
+    if (e[0] === id) out.push({ id: e[1], why: e[2], u: e[3] });
+    else if (e[1] === id) out.push({ id: e[0], why: e[2], u: e[3] });
+  });
+  return out;
+}
+function select(id) {
+  var wasOpen = panel.classList.contains("open");
+  selected = id;
+  var n = byId[id];
+  document.getElementById("n-" + id).classList.add("visited");
+  panel.style.setProperty("--pc", D.groups[n.g].c);
+  document.getElementById("p-group").textContent = D.groups[n.g].name;
+  document.getElementById("p-title").textContent = n.title;
+  var st = document.getElementById("p-stage");
+  if (stageOf[id]) { st.hidden = false; st.textContent = "Journey stage " + stageOf[id].join(", ") + " — " + D.journey.filter(function(s){ return s.id === id; }).map(function(s){ return s.t; }).join("; "); }
+  else st.hidden = true;
+  document.getElementById("p-lead").textContent = n.teaser;
+  var fl = document.getElementById("p-facts"); fl.innerHTML = "";
+  n.what.forEach(function(f){ var li = document.createElement("li"); li.innerHTML = f; fl.appendChild(li); });
+  document.getElementById("p-open").href = "topics/" + id + ".html";
+  var conn = document.getElementById("p-conn"); conn.innerHTML = "";
+  var ns = neighbors(id);
+  document.getElementById("p-clabel").textContent = ns.length ? "Connected topics — " + ns.length : "No mapped connections";
+  ns.forEach(function(c){
+    var m = byId[c.id];
+    var b = document.createElement("button");
+    b.type = "button"; b.style.cssText = "--cc:" + D.groups[m.g].c;
+    b.innerHTML = '<span class="cn">' + m.title + (c.u ? ' <span style="font-weight:500;color:var(--ink-faint);font-size:10px">related · not drawn</span>' : '') + '</span><span class="cw">' + c.why + "</span>";
+    b.addEventListener("click", function(){ select(c.id); flyTo(c.id); });
+    conn.appendChild(b);
+  });
+  panel.removeAttribute("inert");
+  panel.classList.add("open");
+  if (!wasOpen) lastFocus = document.activeElement;
+  if (!wasOpen || !panel.contains(document.activeElement)) document.querySelector("#panel .close").focus();
+  refresh();
+}
+function deselect() {
+  var wasOpen = panel.classList.contains("open");
+  selected = null;
+  panel.classList.remove("open");
+  panel.setAttribute("inert", "");
+  if (journeyOn) setJourney(false);
+  if (wasOpen && lastFocus && document.contains(lastFocus) && (document.activeElement === document.body || panel.contains(document.activeElement))) lastFocus.focus();
+  lastFocus = null;
+  refresh();
+}
+document.querySelector("#panel .close").addEventListener("click", deselect);
+document.addEventListener("keydown", function(e){ if (e.key === "Escape") deselect(); });
+
+function refresh() {
+  var nbr = Object.create(null);
+  if (selected) { nbr[selected] = 1; neighbors(selected).forEach(function(c){ nbr[c.id] = 1; }); }
+  D.nodes.forEach(function(n){
+    var el = document.getElementById("n-" + n.id);
+    el.classList.toggle("sel", n.id === selected);
+    var dim = offGroups[n.g] || (selected && !nbr[n.id]);
+    if (journeyOn) dim = !stageOf[n.id] || offGroups[n.g];
+    el.classList.toggle("dim", !!dim);
+  });
+  D.edges.forEach(function(e, i){
+    var p = document.getElementById("e-" + i);
+    if (!p) return; /* panel-only relation */
+    var touch = selected && (e[0] === selected || e[1] === selected);
+    p.classList.toggle("hl", !!touch);
+    if (touch) p.style.setProperty("--hlc", D.groups[byId[selected].g].c);
+    var dim = offGroups[byId[e[0]].g] || offGroups[byId[e[1]].g] || (selected && !touch) || journeyOn;
+    p.classList.toggle("dim", !!dim);
+  });
+}
+
+/* ══ journey mode ══ */
+var jpanel = document.getElementById("jpanel");
+var jsegs = document.getElementById("jsegs");
+D.journey.forEach(function(s, i){
+  var b = document.createElement("button");
+  b.type = "button"; b.textContent = s.n; b.title = "Stage " + s.n + " — " + s.t;
+  b.addEventListener("click", function(){ jIndex = i; jStep(0); });
+  jsegs.appendChild(b);
+});
+jsegs.style.gridTemplateColumns = "repeat(" + D.journey.length + ", minmax(0, 1fr))";
+if (!D.journey.length) document.getElementById("jtoggle").hidden = true;
+function setJourney(on) {
+  if (!D.journey.length) return;
+  journeyOn = on;
+  document.getElementById("jtoggle").classList.toggle("on", on);
+  jp.classList.toggle("on", on);
+  jpanel.hidden = !on;
+  if (on) { jIndex = 0; jStep(0); } else refresh();
+}
+function jStep(delta) {
+  jIndex = Math.max(0, Math.min(D.journey.length - 1, jIndex + delta));
+  var s = D.journey[jIndex];
+  document.getElementById("j-step").textContent = "stage " + s.n + " of " + D.journey.length;
+  document.getElementById("j-desc").innerHTML = "<b>" + s.t + ".</b> " + s.d;
+  document.getElementById("j-prev").disabled = jIndex === 0;
+  document.getElementById("j-next").disabled = jIndex === D.journey.length - 1;
+  var kids = jsegs.children;
+  for (var i = 0; i < kids.length; i++) {
+    kids[i].className = i < jIndex ? "done" : (i === jIndex ? "cur" : "");
+  }
+  select(s.id);
+  flyTo(s.id);
+}
+document.getElementById("jtoggle").addEventListener("click", function(){ setJourney(!journeyOn); });
+document.getElementById("j-prev").addEventListener("click", function(){ jStep(-1); });
+document.getElementById("j-next").addEventListener("click", function(){ jStep(1); });
+document.addEventListener("keydown", function(e){
+  if (!journeyOn) return;
+  if (e.key === "ArrowRight") { e.preventDefault(); jStep(1); }
+  if (e.key === "ArrowLeft") { e.preventDefault(); jStep(-1); }
+});
+
+/* ══ pan / zoom ══ */
+var vp = document.getElementById("viewport");
+var bar = document.querySelector(".bar");
+function barHeight() { return bar.offsetHeight || 52; }
+function syncBar() { document.documentElement.style.setProperty("--bar-h", barHeight() + "px"); }
+var tx = 0, ty = 0, scale = 1;
+function apply() { world.style.transform = "translate(" + tx + "px," + ty + "px) scale(" + scale + ")"; }
+function fit() {
+  var pad = WORLD_PAD, bh = barHeight(), W = BB.x2 - BB.x1, H = BB.y2 - BB.y1;
+  scale = Math.min((innerWidth - 2 * pad) / W, (innerHeight - bh - 2 * pad) / H, 1.2);
+  tx = (innerWidth - W * scale) / 2 - BB.x1 * scale;
+  ty = bh + (innerHeight - bh - H * scale) / 2 - BB.y1 * scale;
+  apply();
+}
+function flyTo(id) {
+  var n = byId[id];
+  var target = Math.max(scale, 0.9);
+  scale = target;
+  tx = innerWidth / 2 - n.x * scale - (panel.classList.contains("open") ? 200 : 0);
+  ty = barHeight() + (innerHeight - barHeight()) / 2 - n.y * scale;
+  world.style.transition = "transform .35s ease";
+  apply();
+  setTimeout(function(){ world.style.transition = ""; }, 380);
+}
+var pan = null;
+vp.addEventListener("pointerdown", function(e){
+  if (e.target.closest(".node")) return;
+  pan = { x: e.clientX, y: e.clientY, tx: tx, ty: ty };
+  vp.classList.add("panning"); vp.setPointerCapture(e.pointerId);
+});
+vp.addEventListener("pointermove", function(e){
+  if (!pan) return;
+  tx = pan.tx + e.clientX - pan.x; ty = pan.ty + e.clientY - pan.y; apply();
+});
+vp.addEventListener("pointerup", function(e){
+  vp.classList.remove("panning");
+  if (pan && Math.abs(e.clientX - pan.x) < 4 && Math.abs(e.clientY - pan.y) < 4) deselect();
+  pan = null;
+});
+vp.addEventListener("wheel", function(e){
+  e.preventDefault();
+  var f = e.deltaY < 0 ? 1.1 : 0.9;
+  var ns = Math.max(0.35, Math.min(2.2, scale * f));
+  tx = e.clientX - (e.clientX - tx) * (ns / scale);
+  ty = e.clientY - (e.clientY - ty) * (ns / scale);
+  scale = ns; apply();
+}, { passive: false });
+document.getElementById("z-in").addEventListener("click", function(){ zoomAt(innerWidth/2, innerHeight/2, 1.2); });
+document.getElementById("z-out").addEventListener("click", function(){ zoomAt(innerWidth/2, innerHeight/2, 1/1.2); });
+document.getElementById("z-fit").addEventListener("click", fit);
+function zoomAt(cx, cy, f) {
+  var ns = Math.max(0.35, Math.min(2.2, scale * f));
+  tx = cx - (cx - tx) * (ns / scale); ty = cy - (cy - ty) * (ns / scale);
+  scale = ns; apply();
+}
+addEventListener("resize", function(){ syncBar(); fit(); });
+syncBar();
+fit();
+
+</script>
