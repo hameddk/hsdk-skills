@@ -39,11 +39,17 @@ the repo. Follow the guide next to the templates
 (`~/.claude/skills/hsdk-templates/README.md`): fill every `SLOT`, delete every unused
 `COMPONENT` block (HTML *and* its CSS), keep the `KEEP` blocks intact.
 
-If the template directory is missing, halt and print:
+**Plugin installs have no symlinks** — there the templates ship inside the plugin itself: use
+the `templates/` directory at the plugin root (two levels up from the invoking skill's
+SKILL.md). Wherever this contract or a skill says `~/.claude/skills/hsdk-templates/`, that
+plugin-root `templates/` directory is the equivalent fallback.
+
+If neither location exists, halt and print:
 
     ✗ hsdk templates not found.
-      Expected: ~/.claude/skills/hsdk-templates/
-      Re-run ./bin/install from the hsdk-skills repo to fix this.
+      Expected: ~/.claude/skills/hsdk-templates/ (symlink install)
+      or the templates/ directory at the plugin root (plugin install).
+      Re-run ./bin/install from the hsdk-skills repo, or reinstall the plugin.
 
 Two audit-specific overrides of the template guide:
 

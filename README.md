@@ -53,6 +53,15 @@ how it actually works, what surprises people, what to do*.
 
 ## Install
 
+**As a Claude Code plugin** (skills namespaced as `hsdk:security-audit` etc.):
+
+```
+/plugin marketplace add hameddk/hsdk-skills
+/plugin install hsdk@hsdk-skills
+```
+
+**Or via symlinks** (bare skill names, plus Cursor and Agent Skills harnesses):
+
 ```bash
 git clone https://github.com/hameddk/hsdk-skills.git ~/hsdk-skills
 cd ~/hsdk-skills

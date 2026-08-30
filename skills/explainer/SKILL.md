@@ -316,7 +316,9 @@ when the prompt explicitly asks for the CTO template; the knowledge map builds f
 `~/.claude/skills/hsdk-templates/README.md`: extract the template's `<style>` body into
 `assets/style.css`, keep charset first and the template's scripts in every page, and share one
 theme storage key across the site. If the template directory is missing, halt and say to re-run
-`./bin/install` from the hsdk-skills repo.
+`./bin/install` from the hsdk-skills repo. (Installed as a plugin, the symlink does not exist —
+use the `templates/` directory at the plugin root, two levels up from this SKILL.md, wherever a
+`hsdk-templates` path is named, `check-map` included.)
 
 The prose rules stand regardless of template: restrained and readable — a reference someone
 returns to, not a landing page. 65–75 characters per line. Monospace for code and paths.

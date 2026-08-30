@@ -23,7 +23,9 @@ accent, sticky top bar, three-state theme switch, copy buttons); use `template-c
 the prompt explicitly asks for the CTO template. Follow the guide next to the templates
 (`~/.claude/skills/hsdk-templates/README.md`) — token contract, theme mechanism, navigation,
 component catalog. Never re-derive or fork the stylesheet. If the template directory is missing,
-halt and say to re-run `./bin/install` from the hsdk-skills repo.
+halt and say to re-run `./bin/install` from the hsdk-skills repo. (Installed as a plugin, the
+symlink does not exist — use the `templates/` directory at the plugin root, two levels up from
+this SKILL.md, wherever a `hsdk-templates` path is named.)
 
 **Bundled asset** (this skill's own directory, `~/.claude/skills/make-readme-html/assets/`):
 

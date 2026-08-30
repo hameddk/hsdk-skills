@@ -1,0 +1,14 @@
+{
+  "name": "hsdk",
+  "description": "Agent skills for auditing and explaining software repos — committed HTML audit reports (security + architecture), codebase explainers with cited claims, themed doc rendering, and token/cost analysis. One shared design system.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Hamed Sattari",
+    "email": "h@sattari.dk",
+    "url": "https://github.com/hameddk"
+  },
+  "homepage": "https://github.com/hameddk/hsdk-skills",
+  "repository": "https://github.com/hameddk/hsdk-skills",
+  "license": "MIT",
+  "keywords": ["agent-skills", "security-audit", "architecture-audit", "explainer", "documentation", "ai-agents"]
+}

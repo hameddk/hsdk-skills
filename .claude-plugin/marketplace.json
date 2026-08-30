@@ -1,0 +1,17 @@
+{
+  "name": "hsdk-skills",
+  "description": "Agent skills for auditing and explaining software repos: committed HTML security and architecture audits, codebase explainers with cited claims, themed doc rendering, and token/cost analysis.",
+  "owner": {
+    "name": "Hamed Sattari",
+    "email": "h@sattari.dk",
+    "url": "https://github.com/hameddk"
+  },
+  "plugins": [
+    {
+      "name": "hsdk",
+      "source": "./",
+      "description": "Seven skills: /security-audit and /architecture-audit (committed HTML reports, incremental reruns), /explainer (multi-page cited field guide), /make-readme-html, /make-agents-md, /token-calculation, /token-playbook-calculation.",
+      "version": "1.0.0"
+    }
+  ]
+}
