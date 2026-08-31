@@ -106,6 +106,16 @@ the starter templates**, so it never reaches a public tree, a commit, or a PR:
 
 See [private-docs/README.md](private-docs/README.md).
 
+**Plugin installs and the overlay:** installing via the plugin marketplace does not create the
+`hsdk-private-docs` symlink, so the audits run generic (by design — graceful degradation). To
+use your private rubric and logo alongside the plugin, clone the repo and add one symlink:
+
+```bash
+ln -s ~/hsdk-skills/private-docs ~/.claude/skills/hsdk-private-docs
+```
+
+(Or run `./bin/install`, which sets it up along with the symlinked skills.)
+
 ## Output styles
 
 `output-styles/` ships Claude Code output styles (Cursor has no equivalent). Installing does not
